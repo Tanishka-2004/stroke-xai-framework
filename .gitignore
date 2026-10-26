@@ -17,6 +17,7 @@ catboost_info/
 # Temporary test print outputs
 test_print_*.pdf
 *.png
+!images/*.png
 !app/static/img/*.png
 !app/static/img/*.svg
 
