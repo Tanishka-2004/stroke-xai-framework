@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuroPulse XAI | Stroke Clinical Decision Support</title>
+  <meta name="description" content="Research prototype: explainable ML for stroke risk, NIHSS severity, and 90-day mRS outcome prediction. Not validated for clinical use.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261027_v5">
+  <style>
+    /* Direct print styles to guarantee single-page clinical report */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 6mm 10mm;
+      }
+      html, body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-family: 'Inter', -apple-system, sans-serif !important;
+        font-size: 8pt !important;
+        line-height: 1.25 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      /* Non-printable chrome */
+      .no-print,
+      .app-header,
+      .tab-nav-wrapper,
+      .preset-bar,
+      .app-footer,
+      .form-actions,
+      .modal-footer,
+      #btnCloseReport,
+      #btnCloseReport2 {
+        display: none !important;
+      }
+
+      /* 1. When modal is open, isolate #reportModal on 1 single page */
+      body.report-modal-open > *:not(#reportModal) {
+        display: none !important;
+      }
+
+      body.report-modal-open #reportModal {
+        display: block !important;
+        position: static !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        inset: auto !important;
+        overflow: hidden !important;
+      }
+
+      body.report-modal-open .modal-box {
+        box-shadow: none !important;
+        border: none !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+      }
+
+      body.report-modal-open .modal-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-end !important;
+        border-bottom: 2px solid #0f172a !important;
+        padding: 0 0 3px 0 !important;
+        margin-bottom: 5px !important;
+      }
+
+      body.report-modal-open .modal-header h2 {
+        font-size: 12pt !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        margin: 0 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+      }
+
+      body.report-modal-open .modal-header::after {
+        content: "NeuroPulse XAI — Stroke CDSS (Research Prototype)";
+        font-size: 7.5pt;
+        font-weight: 600;
+        color: #64748b;
+      }
+
+      body.report-modal-open .modal-body {
+        padding: 0 !important;
+      }
+
+      body.report-modal-open .report-section {
+        margin-bottom: 4px !important;
+        page-break-inside: avoid !important;
+      }
+
+      body.report-modal-open .report-section h3 {
+        font-size: 7.5pt !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        color: #475569 !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+        padding-bottom: 2px !important;
+        margin-bottom: 3px !important;
+      }
+
+      body.report-modal-open .report-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 3px 6px !important;
+      }
+
+      body.report-modal-open .report-cell {
+        font-size: 7pt !important;
+        color: #64748b !important;
+        line-height: 1.15 !important;
+      }
+
+      body.report-modal-open .report-cell strong {
+        display: block !important;
+        font-size: 8pt !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+        margin-top: 1px !important;
+      }
+
+      body.report-modal-open .report-cell small {
+        font-size: 6.5pt !important;
+        color: #64748b !important;
+        display: block !important;
+        margin-top: 1px !important;
+      }
+
+      body.report-modal-open .table-scroll-wrap {
+        overflow: visible !important;
+        margin-top: 1px !important;
+      }
+
+      body.report-modal-open table {
+        width: 100% !important;
+        font-size: 7pt !important;
+        border-collapse: collapse !important;
+      }
+
+      body.report-modal-open th, 
+      body.report-modal-open td {
+        padding: 1.5px 3px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        text-align: left !important;
+      }
+
+      body.report-modal-open th {
+        font-size: 6.5pt !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        color: #475569 !important;
+        background: #f8fafc !important;
+      }
+
+      body.report-modal-open #reportInterventions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 3px 6px !important;
+      }
+
+      body.report-modal-open .report-intervention-card {
+        font-size: 6.5pt !important;
+        line-height: 1.15 !important;
+        padding: 2.5px 5px !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 3px !important;
+        background: #f8fafc !important;
+        margin: 0 !important;
+      }
+
+      body.report-modal-open .report-intervention-card strong {
+        font-size: 7pt !important;
+        color: #0f172a !important;
+      }
+
+      body.report-modal-open .report-disclaimer {
+        font-size: 6pt !important;
+        line-height: 1.15 !important;
+        color: #64748b !important;
+        padding: 2.5px 5px !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 3px !important;
+        margin-top: 3px !important;
+        background: #f8fafc !important;
+      }
+
+      body.report-modal-open .report-signature {
+        margin-top: 3px !important;
+        font-size: 6.5pt !important;
+        color: #475569 !important;
+      }
+
+      /* 2. When modal is NOT open, hide modal and print active tab cleanly */
+      body:not(.report-modal-open) #reportModal {
+        display: none !important;
+      }
+
+      body:not(.report-modal-open) .main-content {
+        display: block !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      body:not(.report-modal-open) .tab-panel {
+        display: none !important;
+      }
+
+      body:not(.report-modal-open) .tab-panel.active {
+        display: block !important;
+        width: 100% !important;
+      }
+
+      body:not(.report-modal-open) .card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: none !important;
+        color: #0f172a !important;
+        page-break-inside: avoid !important;
+        margin-bottom: 12px !important;
+      }
+
+      body:not(.report-modal-open) table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+      }
+
+      body:not(.report-modal-open) th,
+      body:not(.report-modal-open) td {
+        border-bottom: 1px solid #e2e8f0 !important;
+        color: #0f172a !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header" role="banner">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">NeuroPulse XAI</div>
+          <div class="brand-sub">Stroke Clinical Decision Support — Research Prototype</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btnTheme" class="btn-theme" aria-label="Toggle light/dark mode" title="Toggle theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="icon-moon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab navigation -->
+    <nav class="tab-nav-wrapper" role="navigation" aria-label="Main navigation">
+      <div class="tab-nav" role="tablist">
+        <button class="tab-btn" role="tab" aria-selected="true" aria-controls="tab-assessment" id="tabBtn-assessment" data-tab="assessment">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          Assessment
+        </button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-xai" id="tabBtn-xai" data-tab="xai">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+          </svg>
+          SHAP Explanations
+        </button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-whatif" id="tabBtn-whatif" data-tab="whatif">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          What-If Analysis
+        </button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-benchmarks" id="tabBtn-benchmarks" data-tab="benchmarks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+          Benchmarks
+        </button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-kaggle" id="tabBtn-kaggle" data-tab="kaggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          Kaggle Framework
+        </button>
+        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-batch" id="tabBtn-batch" data-tab="batch">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Cohort Screening
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="main-content" role="main">
+
+    <!-- ================================================================
+         TAB: ASSESSMENT
+         ================================================================ -->
+    <section id="tab-assessment" class="tab-panel active" role="tabpanel" aria-labelledby="tabBtn-assessment">
+
+      <!-- Preset bar -->
+      <div class="preset-bar" id="presetBar">
+        <span class="preset-bar-label">Load case:</span>
+        <div class="preset-seg" id="presetButtons" role="group" aria-label="Clinical presets">
+          <!-- injected by JS -->
+        </div>
+        <span class="preset-helper" id="presetHelperText"></span>
+      </div>
+
+      <!-- Inline error -->
+      <div class="error-banner hidden" id="assessmentError" role="alert" aria-live="assertive">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span class="error-banner-text" id="assessmentErrorMsg"></span>
+        <button class="error-banner-close" aria-label="Dismiss error" onclick="document.getElementById('assessmentError').classList.add('hidden')">&#x2715;</button>
+      </div>
+
+      <div class="assessment-grid">
+
+        <!-- LEFT: Patient form -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Patient intake</h2>
+              <p class="card-subtitle">Enter biomarkers and presentation details, then run the analysis.</p>
+            </div>
+          </div>
+
+          <form id="patientForm" novalidate>
+
+            <!-- Pillar 1 inputs -->
+            <div class="form-section">
+              <div class="form-section-title">
+                <span class="pillar-badge pillar-1">Pillar 1</span>
+                Demographic and cardiovascular risk factors
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="inputAge">Age (years)</label>
+                  <input type="number" id="inputAge" name="age" value="67" min="18" max="100" required>
+                  <span class="field-error" id="errAge"></span>
+                </div>
+                <div class="form-group">
+                  <label for="inputGender">Sex</label>
+                  <select id="inputGender" name="gender">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputSbp">Systolic BP (mmHg)</label>
+                  <input type="number" id="inputSbp" name="systolic_bp" value="165" min="80" max="240" required>
+                  <span class="field-hint">Stage 2 HTN: &ge;140</span>
+                </div>
+                <div class="form-group">
+                  <label for="inputHtn">Hypertension diagnosed</label>
+                  <select id="inputHtn" name="hypertension">
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputHeartDisease">Heart disease / AFib</label>
+                  <select id="inputHeartDisease" name="heart_disease">
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputGlucose">Average glucose (mg/dL)</label>
+                  <input type="number" step="0.1" id="inputGlucose" name="avg_glucose_level" value="210.0" min="50" max="400" required>
+                  <span class="field-hint">Diabetic range: &ge;140</span>
+                </div>
+                <div class="form-group">
+                  <label for="inputBmi">BMI</label>
+                  <input type="number" step="0.1" id="inputBmi" name="bmi" value="31.4" min="12" max="60" required>
+                </div>
+                <div class="form-group">
+                  <label for="inputChol">Total cholesterol (mg/dL)</label>
+                  <input type="number" step="0.1" id="inputChol" name="total_cholesterol" value="240.0" min="80" max="450" required>
+                </div>
+                <div class="form-group">
+                  <label for="inputSmoking">Smoking status</label>
+                  <select id="inputSmoking" name="smoking_status">
+                    <option value="smokes">Current smoker</option>
+                    <option value="formerly smoked">Formerly smoked</option>
+                    <option value="never smoked">Never smoked</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputActivity">Physical activity (0–10)</label>
+                  <input type="number" step="0.5" id="inputActivity" name="physical_activity" value="2.0" min="0" max="10">
+                  <span class="field-hint">0 = sedentary, 10 = very active</span>
+                </div>
+                <div class="form-group">
+                  <label for="inputWorkType">Work type</label>
+                  <select id="inputWorkType" name="work_type">
+                    <option value="Private">Private sector</option>
+                    <option value="Self-employed">Self-employed</option>
+                    <option value="Govt_job">Government</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputResidence">Residence</label>
+                  <select id="inputResidence" name="residence_type">
+                    <option value="Urban">Urban</option>
+                    <option value="Rural">Rural</option>
+                  </select>
+                </div>
+                <div class="form-group" style="display:none">
+                  <label for="inputMarried">Married</label>
+                  <select id="inputMarried" name="ever_married">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pillar 2 inputs -->
+            <div class="form-section">
+              <div class="form-section-title">
+                <span class="pillar-badge pillar-2">Pillar 2</span>
+                Acute neurological presentation (NIHSS severity)
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="inputOnset">Time to ER (hours)</label>
+                  <input type="number" step="0.1" id="inputOnset" name="onset_to_er_hours" value="2.2" min="0.1" max="72.0" required>
+                  <span class="field-hint">&le;4.5 h thrombolysis window</span>
+                </div>
+                <div class="form-group">
+                  <label for="inputSubtype">Stroke subtype (TOAST)</label>
+                  <select id="inputSubtype" name="stroke_subtype">
+                    <option value="Large Artery Atherosclerosis">Large artery atherosclerosis</option>
+                    <option value="Cardioembolic">Cardioembolic (AFib)</option>
+                    <option value="Small Vessel Occlusion (Lacunar)">Small vessel (lacunar)</option>
+                    <option value="Other/Cryptogenic">Other / cryptogenic</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputPriorTia">Prior stroke or TIA</label>
+                  <select id="inputPriorTia" name="prior_stroke_tia">
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputFacialPalsy">Facial palsy (NIHSS 4)</label>
+                  <select id="inputFacialPalsy" name="facial_palsy">
+                    <option value="0">0 — Normal</option>
+                    <option value="1">1 — Minor (flattened fold)</option>
+                    <option value="2" selected>2 — Partial (lower face)</option>
+                    <option value="3">3 — Complete unilateral</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputMotorArm">Motor arm drift (NIHSS 5)</label>
+                  <select id="inputMotorArm" name="motor_arm_drift">
+                    <option value="0">0 — No drift</option>
+                    <option value="1">1 — Drift &lt;10 s</option>
+                    <option value="2">2 — Falls &lt;10 s</option>
+                    <option value="3" selected>3 — No anti-gravity</option>
+                    <option value="4">4 — No movement</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputMotorLeg">Motor leg drift (NIHSS 6)</label>
+                  <select id="inputMotorLeg" name="motor_leg_drift">
+                    <option value="0">0 — No drift</option>
+                    <option value="1">1 — Drift &lt;5 s</option>
+                    <option value="2" selected>2 — Falls &lt;5 s</option>
+                    <option value="3">3 — No anti-gravity</option>
+                    <option value="4">4 — No movement</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputSpeech">Speech (NIHSS 9/10)</label>
+                  <select id="inputSpeech" name="speech_impairment">
+                    <option value="0">0 — Normal</option>
+                    <option value="1">1 — Mild–moderate</option>
+                    <option value="2" selected>2 — Severe / aphasia</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputLoc">Consciousness (NIHSS 1a)</label>
+                  <select id="inputLoc" name="loc_deficit">
+                    <option value="0">0 — Alert</option>
+                    <option value="1" selected>1 — Arousable</option>
+                    <option value="2">2 — Obtunded</option>
+                    <option value="3">3 — Comatose</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pillar 3 inputs -->
+            <div class="form-section">
+              <div class="form-section-title">
+                <span class="pillar-badge pillar-3">Pillar 3</span>
+                Reperfusion interventions (90-day outcome)
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="inputTpa">IV tPA thrombolysis</label>
+                  <select id="inputTpa" name="thrombolysis_iv_tpa">
+                    <option value="1">Yes</option>
+                    <option value="0">No / ineligible</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputEvt">Endovascular thrombectomy (EVT)</label>
+                  <select id="inputEvt" name="endovascular_thrombectomy">
+                    <option value="1">Yes</option>
+                    <option value="0">No</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="inputComplications">Acute complications</label>
+                  <select id="inputComplications" name="acute_complications">
+                    <option value="0">None</option>
+                    <option value="1">Present (haemorrhage / pneumonia)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" id="btnSubmit" class="btn btn-primary">
+                <span class="btn-spinner" id="submitSpinner" aria-hidden="true"></span>
+                <span class="btn-label">Run tri-pillar analysis</span>
+              </button>
+              <button type="button" id="btnReport" class="btn btn-secondary" title="Export and print patient clinical audit summary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                </svg>
+                <span class="btn-label">Export Clinical Audit</span>
+              </button>
+            </div>
+          </form>
+        </div><!-- end form card -->
+
+        <!-- RIGHT: Results stack -->
+        <div class="results-stack" aria-live="polite" aria-label="Prediction results">
+
+          <!-- Empty state before first run -->
+          <div class="card empty-state" id="emptyResults">
+            <h3>No analysis yet</h3>
+            <p>Select a preset or fill the form and click "Run tri-pillar analysis".</p>
+            <button class="btn btn-primary" onclick="document.getElementById('btnSubmit').click()">
+              Run analysis
+            </button>
+          </div>
+
+          <!-- Pillar 1 result -->
+          <div class="card result-card hidden" id="cardRisk">
+            <div class="result-header">
+              <span class="text-sm" style="font-weight:600;color:var(--text-muted)">
+                <span class="pillar-badge pillar-1">Pillar 1</span>
+                Long-term stroke risk
+              </span>
+              <span class="badge" id="badgeRiskTier"></span>
+            </div>
+            <div class="risk-number" id="textRiskPct">--%</div>
+            <div class="text-xs text-muted mb-4">Estimated probability</div>
+            <div class="risk-gauge-wrap">
+              <div class="risk-gauge-track">
+                <div class="risk-gauge-fill" id="gaugeRiskFill" style="width:0%"></div>
+              </div>
+              <div class="risk-gauge-labels">
+                <span>Low (&lt;15%)</span>
+                <span>Moderate</span>
+                <span>High</span>
+                <span>Critical (&gt;70%)</span>
+              </div>
+            </div>
+            <p class="risk-narrative text-sm" id="textRiskNarrative"></p>
+          </div>
+
+          <!-- Pillar 2 result -->
+          <div class="card result-card hidden" id="cardSeverity">
+            <div class="result-header">
+              <span class="text-sm" style="font-weight:600;color:var(--text-muted)">
+                <span class="pillar-badge pillar-2">Pillar 2</span>
+                Acute NIHSS severity
+              </span>
+              <span class="badge badge-neutral" id="badgeSeverityTier"></span>
+            </div>
+            <div class="stat-grid">
+              <div class="stat-item">
+                <span class="stat-label">Estimated NIHSS</span>
+                <span class="stat-value" id="textNihss">--</span>
+                <span class="stat-sub">out of 42</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Triage note</span>
+                <span class="stat-sub" id="textTriage"></span>
+              </div>
+            </div>
+            <!-- NIHSS tier strip: 5 bands -->
+            <div class="nihss-strip mt-4" role="list" aria-label="NIHSS severity bands">
+              <div class="nihss-step" data-nihss-lo="0" data-nihss-hi="0" role="listitem">No deficit (0)</div>
+              <div class="nihss-step" data-nihss-lo="1" data-nihss-hi="4" role="listitem">Minor (1-4)</div>
+              <div class="nihss-step" data-nihss-lo="5" data-nihss-hi="15" role="listitem">Moderate (5-15)</div>
+              <div class="nihss-step" data-nihss-lo="16" data-nihss-hi="20" role="listitem">Mod-severe (16-20)</div>
+              <div class="nihss-step" data-nihss-lo="21" data-nihss-hi="42" role="listitem">Severe (21-42)</div>
+            </div>
+          </div>
+
+          <!-- Pillar 3 result -->
+          <div class="card result-card hidden" id="cardOutcome">
+            <div class="result-header">
+              <span class="text-sm" style="font-weight:600;color:var(--text-muted)">
+                <span class="pillar-badge pillar-3">Pillar 3</span>
+                90-day functional outcome (mRS)
+              </span>
+              <span class="badge badge-neutral" id="badgeOutcome"></span>
+            </div>
+            <div class="stat-grid">
+              <div class="stat-item">
+                <span class="stat-label">P(independence, mRS 0-2)</span>
+                <span class="stat-value" id="textOutcomePct">--%</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Prognosis</span>
+                <span class="stat-sub" id="textOutcomePrognosis"></span>
+              </div>
+            </div>
+            <div class="consistency-warning hidden" id="consistencyWarning" role="alert"></div>
+            <p class="text-xs text-muted mt-4">
+              Calibration note: evaluated with 5-fold Platt scaling on the Kaggle stroke cohort (N=5,110, 4.87% prevalence; Brier: 0.0416). Probabilities are model outputs; not clinical estimates.
+            </p>
+          </div>
+
+          <!-- Guidance hint -->
+          <div class="card hidden" id="cardGuidance" style="font-size:var(--text-sm);color:var(--text-secondary)">
+            After running the analysis, visit <strong>SHAP Explanations</strong> to inspect feature attributions,
+            or <strong>What-If Analysis</strong> to simulate risk-reduction interventions.
+          </div>
+
+        </div><!-- end results stack -->
+      </div><!-- end assessment grid -->
+    </section>
+
+    <!-- ================================================================
+         TAB: SHAP EXPLANATIONS
+         ================================================================ -->
+    <section id="tab-xai" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-xai">
+
+      <!-- Patient context -->
+      <div class="patient-context-bar hidden" id="xaiContextBar" aria-live="polite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+        </svg>
+        Showing attributions for: <strong id="xaiPatientLabel">—</strong>
+      </div>
+
+      <!-- Empty state -->
+      <div class="card empty-state" id="xaiEmpty">
+        <h3>No analysis loaded</h3>
+        <p>Run a prediction on the Assessment tab to see SHAP feature attributions here.</p>
+        <button class="btn btn-primary" onclick="switchTab('assessment')">Go to Assessment</button>
+      </div>
+
+      <div id="xaiContent" class="hidden">
+        <div class="card mb-6">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Local SHAP attribution — stroke risk model</h2>
+              <p class="card-subtitle">Shapley values (&#966;) showing each feature's contribution relative to the cohort average for the selected patient.</p>
+            </div>
+            <div class="shap-legend" aria-label="SHAP colour legend">
+              <div class="shap-legend-item">
+                <div class="shap-legend-dot" style="background:var(--shap-risk)" aria-hidden="true"></div>
+                Risk-increasing (+&#966;)
+              </div>
+              <div class="shap-legend-item">
+                <div class="shap-legend-dot" style="background:var(--shap-protective)" aria-hidden="true"></div>
+                Protective (&minus;&#966;)
+              </div>
+            </div>
+          </div>
+
+          <div class="shap-layout">
+            <!-- Bar chart -->
+            <div>
+              <h3 class="text-sm mb-4" style="font-weight:600;color:var(--text-secondary)">Feature contributions (magnitude + direction)</h3>
+              <div class="shap-bar-list" id="shapBarList" aria-label="SHAP bar chart"></div>
+            </div>
+
+            <!-- Table -->
+            <div>
+              <h3 class="text-sm mb-4" style="font-weight:600;color:var(--text-secondary)">Biomarker attribution details</h3>
+              <div class="table-scroll-wrap">
+                <table aria-label="SHAP attribution table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Feature</th>
+                      <th scope="col">SHAP (&#966;)</th>
+                      <th scope="col">Direction</th>
+                    </tr>
+                  </thead>
+                  <tbody id="shapTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Global importance -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Global feature importance</h2>
+              <p class="card-subtitle">Mean |SHAP| across the Kaggle stroke cohort (N=5,110, 4.87% prevalence) &mdash; overall ranking of contributors to stroke risk.</p>
+            </div>
+          </div>
+          <div class="global-shap-wrap">
+            <canvas id="chartGlobalShap" aria-label="Global SHAP feature importance bar chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         TAB: WHAT-IF ANALYSIS
+         ================================================================ -->
+    <section id="tab-whatif" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-whatif">
+
+      <div class="patient-context-bar hidden" id="whatifContextBar" aria-live="polite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0" aria-hidden="true">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+        Simulating interventions for: <strong id="whatifPatientLabel">—</strong>
+      </div>
+
+      <div class="card empty-state" id="whatifEmpty">
+        <h3>No patient loaded</h3>
+        <p>Run an assessment first, then return here to simulate risk-reduction interventions.</p>
+        <button class="btn btn-primary" onclick="switchTab('assessment')">Go to Assessment</button>
+      </div>
+
+      <div id="whatifContent" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Modifiable risk-factor simulation</h2>
+              <p class="card-subtitle">Each slider triggers a real model call. Results show absolute probability change (percentage points), not relative change.</p>
+            </div>
+          </div>
+
+          <!-- Error banner for what-if -->
+          <div class="error-banner hidden" id="whatifError" role="alert" aria-live="assertive">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span class="error-banner-text" id="whatifErrorMsg"></span>
+            <button class="error-banner-close" aria-label="Dismiss" onclick="document.getElementById('whatifError').classList.add('hidden')">&#x2715;</button>
+          </div>
+
+          <div class="whatif-grid">
+            <!-- Sliders -->
+            <div>
+              <h3 class="text-sm mb-4" style="font-weight:600;color:var(--text-secondary)">Adjust modifiable factors</h3>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <label for="sliderSbp" class="text-sm">Systolic BP (mmHg) <span class="field-hint">— AHA target: &lt;130</span></label>
+                  <span class="slider-val" id="valSbp" aria-live="polite">165</span>
+                </div>
+                <input type="range" id="sliderSbp" min="80" max="240" value="165" aria-label="Systolic blood pressure slider">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <label for="sliderGlucose" class="text-sm">Average glucose (mg/dL) <span class="field-hint">— ADA target: &lt;100</span></label>
+                  <span class="slider-val" id="valGlucose" aria-live="polite">210</span>
+                </div>
+                <input type="range" id="sliderGlucose" min="50" max="400" value="210" aria-label="Average glucose slider">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <label for="sliderActivity" class="text-sm">Physical activity (0–10)</label>
+                  <span class="slider-val" id="valActivity" aria-live="polite">2.0</span>
+                </div>
+                <input type="range" id="sliderActivity" min="0" max="10" step="0.5" value="2.0" aria-label="Physical activity slider">
+              </div>
+
+              <div class="slider-group">
+                <label class="text-sm" style="font-weight:500;color:var(--text-secondary)">Smoking status</label>
+                <div class="smoke-seg" role="group" aria-label="Smoking status selector" id="smokeSeg">
+                  <button class="smoke-btn" data-val="smokes">Current smoker</button>
+                  <button class="smoke-btn" data-val="formerly smoked">Former smoker</button>
+                  <button class="smoke-btn active" data-val="never smoked">Non-smoker</button>
+                </div>
+              </div>
+
+              <div class="cf-disclaimer" role="note">
+                Simulation of model output only. Combined risk reduction is not the sum of individual effects
+                (interactions are non-linear). These are not treatment effect estimates.
+              </div>
+            </div>
+
+            <!-- Results panel -->
+            <div>
+              <h3 class="text-sm mb-4" style="font-weight:600;color:var(--text-secondary)">Risk trajectory</h3>
+              <div class="risk-compare mb-4">
+                <div class="risk-compare-box">
+                  <div class="risk-compare-label">Baseline (current inputs)</div>
+                  <div class="risk-compare-value" id="cfBaseline">--%</div>
+                  <div class="risk-compare-tier" id="cfBaselineTier"></div>
+                </div>
+                <div class="risk-compare-arrow" aria-hidden="true">&rarr;</div>
+                <div class="risk-compare-box">
+                  <div class="risk-compare-label">Simulated (slider values)</div>
+                  <div class="risk-compare-value color-safe" id="cfNew">--%</div>
+                  <div class="risk-compare-tier" id="cfNewTier"></div>
+                </div>
+              </div>
+
+              <div class="cf-drop-summary" id="cfDropSummary" aria-live="polite">
+                Adjust sliders to see simulated risk change.
+              </div>
+
+              <h3 class="text-sm mt-6 mb-4" style="font-weight:600;color:var(--text-secondary)">Individual intervention estimates</h3>
+              <p class="text-xs text-muted mb-4">Each is a single-variable model call from the current baseline. Values are absolute risk change (percentage points).</p>
+              <div class="intervention-list" id="interventionList" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         TAB: BENCHMARKS
+         ================================================================ -->
+    <section id="tab-benchmarks" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-benchmarks">
+      <div class="card mb-6">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Research benchmark results</h2>
+            <p class="card-subtitle">Comparative evaluation on the public Kaggle stroke dataset (N=5,110, 4.87% prevalence, held-out test N=1,022). All metrics sourced from benchmark_metrics.json.</p>
+          </div>
+        </div>
+
+        <!-- KPI row: deployed model metrics loaded dynamically -->
+        <div class="kpi-row" id="kpiRow">
+          <!-- injected by JS from benchmark_metrics.json -->
+        </div>
+      </div>
+
+      <!-- Task 1 table -->
+      <div class="card mb-6">
+        <div class="card-header">
+          <h2 class="card-title">Task 1: Long-term stroke risk (classification)</h2>
+          <span class="badge badge-neutral">Kaggle test set N=1,022 &bull; 50 stroke events &bull; 5-fold CV</span>
+        </div>
+        <div class="table-scroll-wrap">
+          <table aria-label="Task 1 benchmark table">
+            <thead>
+              <tr>
+                <th scope="col">Model</th>
+                <th scope="col">ROC-AUC</th>
+                <th scope="col">PR-AUC</th>
+                <th scope="col">Accuracy</th>
+                <th scope="col">Sensitivity</th>
+                <th scope="col">Specificity</th>
+                <th scope="col">F1</th>
+                <th scope="col">Brier</th>
+                <th scope="col">CV AUC &plusmn; SD</th>
+              </tr>
+            </thead>
+            <tbody id="benchTask1Body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Task 2 + 3 grid -->
+      <div class="chart-grid mb-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Task 2: NIHSS severity (regression)</h3>
+          </div>
+          <div class="table-scroll-wrap">
+            <table aria-label="Task 2 benchmark table">
+              <thead>
+                <tr>
+                  <th scope="col">Model</th>
+                  <th scope="col">MAE</th>
+                  <th scope="col">RMSE</th>
+                  <th scope="col">R&sup2;</th>
+                  <th scope="col">Tier accuracy</th>
+                </tr>
+              </thead>
+              <tbody id="benchTask2Body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Task 3: 90-day mRS outcome (classification)</h3>
+          </div>
+          <div class="table-scroll-wrap">
+            <table aria-label="Task 3 benchmark table">
+              <thead>
+                <tr>
+                  <th scope="col">Model</th>
+                  <th scope="col">ROC-AUC</th>
+                  <th scope="col">Sensitivity</th>
+                  <th scope="col">F1</th>
+                  <th scope="col">Specificity</th>
+                </tr>
+              </thead>
+              <tbody id="benchTask3Body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROC curves + confusion matrix -->
+      <div class="chart-grid mb-6">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">ROC curves — Task 1 (all models)</h3>
+            <span class="badge badge-neutral">True positive rate vs false positive rate</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chartRoc" aria-label="ROC curves for all Task 1 models"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Confusion matrix — XGBoost at threshold 0.35</h3>
+            <span class="badge badge-neutral">Test set N=1,000</span>
+          </div>
+          <div class="cm-grid" id="cmGrid">
+            <div class="cm-cell cm-tn">
+              <span class="cm-val" id="cmTN">—</span>
+              <span class="cm-lbl">True negative</span>
+            </div>
+            <div class="cm-cell cm-fp">
+              <span class="cm-val" id="cmFP">—</span>
+              <span class="cm-lbl">False positive</span>
+            </div>
+            <div class="cm-cell cm-fn">
+              <span class="cm-val" id="cmFN">—</span>
+              <span class="cm-lbl">False negative</span>
+            </div>
+            <div class="cm-cell cm-tp">
+              <span class="cm-val" id="cmTP">—</span>
+              <span class="cm-lbl">True positive</span>
+            </div>
+          </div>
+          <!-- Derived metrics computed from CM counts in JS -->
+          <dl class="cm-derived" id="cmDerived"></dl>
+          <p class="text-xs text-muted mt-4">
+            At threshold 0.35, 36% of stroke cases are missed (false negative rate).
+            Threshold choice involves trade-offs between sensitivity and specificity.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         TAB: KAGGLE FRAMEWORK
+         ================================================================ -->
+    <section id="tab-kaggle" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-kaggle">
+      <div class="card mb-6">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-4);flex-wrap:wrap">
+          <div>
+            <h2 class="card-title">Kaggle stroke prediction dataset — 5-stage CatBoost framework</h2>
+            <p class="card-subtitle">
+              Production-grade machine learning architecture evaluated on the public Kaggle stroke dataset (N=5,110, 4.87% prevalence, held-out test N=1,022).
+            </p>
+          </div>
+        </div>
+
+        <!-- 5-stage architecture -->
+        <div class="form-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--space-3);margin-top:var(--space-4)">
+          <div style="border-left:3px solid var(--accent);padding-left:var(--space-3)">
+            <div class="text-xs text-muted">Stage 1</div>
+            <div class="text-sm" style="font-weight:600">Clinical preprocessing</div>
+            <div class="text-xs text-muted">Median BMI imputation (28.1), outlier removal, leakage-free 80/20 split.</div>
+          </div>
+          <div style="border-left:3px solid #7c3aed;padding-left:var(--space-3)">
+            <div class="text-xs text-muted">Stage 2</div>
+            <div class="text-sm" style="font-weight:600">Cost-sensitive CatBoost</div>
+            <div class="text-xs text-muted">19.54:1 class weighting, symmetric trees, native categorical handling.</div>
+          </div>
+          <div style="border-left:3px solid var(--green);padding-left:var(--space-3)">
+            <div class="text-xs text-muted">Stage 3</div>
+            <div class="text-sm" style="font-weight:600">Probability calibration</div>
+            <div class="text-xs text-muted">5-fold OOF Platt sigmoid scaling. Brier 0.170 &rarr; 0.041.</div>
+          </div>
+          <div style="border-left:3px solid var(--amber);padding-left:var(--space-3)">
+            <div class="text-xs text-muted">Stage 4</div>
+            <div class="text-sm" style="font-weight:600">SHAP interpretability</div>
+            <div class="text-xs text-muted">Global rankings, patient waterfall plots, age x glucose interaction.</div>
+          </div>
+          <div style="border-left:3px solid var(--red);padding-left:var(--space-3)">
+            <div class="text-xs text-muted">Stage 5</div>
+            <div class="text-sm" style="font-weight:600">Reliable evaluation</div>
+            <div class="text-xs text-muted">Demographic parity audit, decision-curve analysis.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Model comparison table -->
+      <div class="card mb-6">
+        <div class="card-header">
+          <h3 class="card-title">Stage 2 & 5: held-out test cohort results (N=1,022)</h3>
+          <span class="badge badge-neutral">Imbalance ratio 19.54:1 &bull; 50 stroke events in test set</span>
+        </div>
+        <div class="table-scroll-wrap">
+          <table aria-label="Kaggle framework model comparison">
+            <thead>
+              <tr>
+                <th scope="col">Model</th>
+                <th scope="col">ROC-AUC</th>
+                <th scope="col">PR-AUC</th>
+                <th scope="col">Sensitivity</th>
+                <th scope="col">Specificity</th>
+                <th scope="col">Balanced accuracy</th>
+                <th scope="col">F1</th>
+                <th scope="col">Brier (calibrated)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="td-deployed">
+                <td><strong>CatBoost (cost-sensitive)</strong> <span class="badge badge-neutral" style="font-size:0.65rem">Best recall</span></td>
+                <td class="text-mono">0.8402</td>
+                <td class="text-mono">0.2812</td>
+                <td class="text-mono"><strong>84.0% (42/50)</strong></td>
+                <td class="text-mono">66.87%</td>
+                <td class="text-mono">75.44%</td>
+                <td class="text-mono">0.2024</td>
+                <td class="text-mono"><strong>0.0416</strong></td>
+              </tr>
+              <tr>
+                <td>Logistic regression (balanced)</td>
+                <td class="text-mono">0.8394</td>
+                <td class="text-mono">0.2594</td>
+                <td class="text-mono">80.0% (40/50)</td>
+                <td class="text-mono">73.56%</td>
+                <td class="text-mono">76.78%</td>
+                <td class="text-mono">0.2319</td>
+                <td class="text-mono">0.1726</td>
+              </tr>
+              <tr>
+                <td>Random forest (balanced)</td>
+                <td class="text-mono">0.8262</td>
+                <td class="text-mono">0.2261</td>
+                <td class="text-mono">76.0% (38/50)</td>
+                <td class="text-mono">69.77%</td>
+                <td class="text-mono">72.89%</td>
+                <td class="text-mono">0.1978</td>
+                <td class="text-mono">0.1842</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Calibration -->
+      <div class="chart-grid mb-6">
+        <div class="card">
+          <h3 class="card-title mb-4">Stage 3: probability calibration impact</h3>
+          <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+            <div style="padding:var(--space-3);border:1px solid var(--border);border-radius:var(--radius-md)">
+              <div class="text-xs text-muted">Uncalibrated</div>
+              <div class="text-sm" style="font-weight:600;color:var(--red)">Mean prediction 38.74% vs 4.87% observed prevalence — severe overestimation from cost-sensitive weighting.</div>
+              <div class="text-xs text-muted">Brier score: 0.1703</div>
+            </div>
+            <div style="padding:var(--space-3);border:1px solid var(--green);border-radius:var(--radius-md)">
+              <div class="text-xs text-muted">Platt sigmoid calibration (5-fold OOF)</div>
+              <div class="text-sm" style="font-weight:600;color:var(--green)">Mean prediction 4.92% — matches observed prevalence (4.87%).</div>
+              <div class="text-xs text-muted">Brier score: 0.0416 (75.6% reduction)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title mb-4">Stage 4: global SHAP rankings (Kaggle cohort)</h3>
+          <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+            <div class="shap-bar-meta"><span>1. Age</span><strong class="text-mono">1.3975</strong></div>
+            <div class="shap-track"><div class="shap-fill shap-fill-risk" style="width:100%"></div></div>
+            <div class="shap-bar-meta"><span>2. BMI</span><strong class="text-mono">0.2056</strong></div>
+            <div class="shap-track"><div class="shap-fill shap-fill-risk" style="width:15%"></div></div>
+            <div class="shap-bar-meta"><span>3. Average glucose</span><strong class="text-mono">0.0921</strong></div>
+            <div class="shap-track"><div class="shap-fill shap-fill-risk" style="width:7%"></div></div>
+            <div class="shap-bar-meta"><span>4. Hypertension</span><strong class="text-mono">0.0806</strong></div>
+            <div class="shap-track"><div class="shap-fill shap-fill-risk" style="width:6%"></div></div>
+            <div class="shap-bar-meta"><span>5. Smoking status</span><strong class="text-mono">0.0373</strong></div>
+            <div class="shap-track"><div class="shap-fill shap-fill-risk" style="width:3%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subgroup + DCA -->
+      <div class="chart-grid mb-6">
+        <div class="card">
+          <h3 class="card-title mb-4">Stage 5: subgroup demographic audit</h3>
+          <div class="limitation-box mb-4">
+            <h4>Limitations</h4>
+            <p>Model performance varies substantially by age group.
+            AUC 0.628 for Age &lt;55 and 0.563 for Age &gt;70 are weak —
+            these subgroups should not be relied upon for clinical triage. Likely caused by
+            low event counts and covariate shift in the Kaggle dataset.</p>
+          </div>
+          <div class="table-scroll-wrap">
+            <table aria-label="Subgroup fairness audit">
+              <thead>
+                <tr>
+                  <th scope="col">Subgroup</th>
+                  <th scope="col">N (test)</th>
+                  <th scope="col">Prevalence</th>
+                  <th scope="col">ROC-AUC</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Age &lt;55</td><td>668</td><td>1.20%</td><td class="text-mono">0.628 &#9888;</td></tr>
+                <tr style="background:color-mix(in srgb,var(--accent-light) 30%,transparent)"><td><strong>Age 55–70</strong></td><td>218</td><td>5.05%</td><td class="text-mono"><strong>0.739</strong></td></tr>
+                <tr><td>Age &gt;70</td><td>136</td><td>22.79%</td><td class="text-mono">0.563 &#9888;</td></tr>
+                <tr><td>Sex: male</td><td>425</td><td>4.94%</td><td class="text-mono">0.839</td></tr>
+                <tr><td>Sex: female</td><td>597</td><td>4.86%</td><td class="text-mono">0.840</td></tr>
+                <tr><td>Hypertensive</td><td>111</td><td>10.81%</td><td class="text-mono">0.785</td></tr>
+                <tr><td>Normotensive</td><td>911</td><td>4.17%</td><td class="text-mono">0.839</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title mb-4">Stage 5: decision-curve analysis (net benefit)</h3>
+          <p class="text-sm text-muted mb-4">Net benefit compared to treat-all and treat-none strategies. Positive values indicate the model offers clinical utility at that threshold.</p>
+          <div class="table-scroll-wrap">
+            <table aria-label="Decision curve analysis">
+              <thead>
+                <tr>
+                  <th scope="col">Threshold</th>
+                  <th scope="col">Model net benefit</th>
+                  <th scope="col">Treat-all</th>
+                  <th scope="col">Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="text-mono">5%</td><td class="text-mono">+0.0382</td><td class="text-mono">+0.0228</td><td>Model +67.5% vs treat-all</td></tr>
+                <tr style="background:color-mix(in srgb,var(--accent-light) 30%,transparent)">
+                  <td class="text-mono"><strong>10% (cutoff)</strong></td><td class="text-mono"><strong>+0.0185</strong></td><td class="text-mono color-risk">&minus;0.0568</td><td>Treat-all causes net harm at this threshold</td>
+                </tr>
+                <tr><td class="text-mono">15%</td><td class="text-mono">+0.0112</td><td class="text-mono color-risk">&minus;0.1203</td><td>Reduced overtreatment</td></tr>
+                <tr><td class="text-mono">20%</td><td class="text-mono">+0.0064</td><td class="text-mono color-risk">&minus;0.1784</td><td>Very selective screening</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         TAB: COHORT SCREENING
+         ================================================================ -->
+    <section id="tab-batch" class="tab-panel" role="tabpanel" aria-labelledby="tabBtn-batch">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Cohort batch screening</h2>
+            <p class="card-subtitle">
+              Evaluate a patient cohort against the stroke risk model. Upload a CSV or run the built-in 25-patient sample.
+              Required CSV columns: age, gender, hypertension, systolic_bp, heart_disease, ever_married, work_type, residence_type, avg_glucose_level, bmi, smoking_status.
+              Rows with "Unknown" smoking are mapped to "never smoked" for scoring and flagged.
+            </p>
+          </div>
+          <div style="display:flex;gap:var(--space-3);flex-wrap:wrap">
+            <button class="btn btn-primary" id="btnRunBatch">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="width:16px;height:16px">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span class="btn-spinner" id="batchSpinner" aria-hidden="true"></span>
+              <span class="btn-label">Run sample cohort (N=25)</span>
+            </button>
+            <label class="btn btn-secondary" for="batchFileInput" style="cursor:pointer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="width:16px;height:16px">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Upload CSV
+            </label>
+            <input type="file" id="batchFileInput" accept=".csv" class="hidden" aria-label="Upload CSV file">
+          </div>
+        </div>
+
+        <!-- Error banner -->
+        <div class="error-banner hidden" id="batchError" role="alert" aria-live="assertive">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span class="error-banner-text" id="batchErrorMsg"></span>
+          <button class="error-banner-close" aria-label="Dismiss" onclick="document.getElementById('batchError').classList.add('hidden')">&#x2715;</button>
+        </div>
+
+        <!-- KPI row: hidden until screening runs -->
+        <div class="batch-kpi-row hidden" id="batchKpiRow" aria-live="polite">
+          <div class="batch-kpi">
+            <div class="batch-kpi-label">Total screened</div>
+            <div class="batch-kpi-value" id="batchTotal">--</div>
+          </div>
+          <div class="batch-kpi">
+            <div class="batch-kpi-label">High / critical</div>
+            <div class="batch-kpi-value risk-val" id="batchHigh">--</div>
+          </div>
+          <div class="batch-kpi">
+            <div class="batch-kpi-label">Moderate</div>
+            <div class="batch-kpi-value mod-val" id="batchMod">--</div>
+          </div>
+          <div class="batch-kpi">
+            <div class="batch-kpi-label">Low risk</div>
+            <div class="batch-kpi-value low-val" id="batchLow">--</div>
+          </div>
+        </div>
+
+        <!-- Table: empty state shown before run -->
+        <div class="empty-state" id="batchEmpty" style="padding:var(--space-10) 0">
+          <h3>No screening results yet</h3>
+          <p>Click "Run sample cohort" or upload a CSV to begin.</p>
+        </div>
+
+        <div class="table-scroll-wrap hidden" id="batchTableWrap">
+          <table aria-label="Batch screening results" id="batchTable">
+            <thead>
+              <tr>
+                <th scope="col">Patient ID</th>
+                <th scope="col">Age</th>
+                <th scope="col">Sex</th>
+                <th scope="col">Systolic BP</th>
+                <th scope="col">Glucose (mg/dL)</th>
+                <th scope="col">Risk %</th>
+                <th scope="col">Tier</th>
+                <th scope="col">Top SHAP driver</th>
+              </tr>
+            </thead>
+            <tbody id="batchTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================================================================
+       FOOTER
+       ================================================================ -->
+  <footer class="app-footer" role="contentinfo">
+    <div class="footer-disclaimer" role="note">
+      Research prototype evaluated on the public Kaggle stroke dataset (N=5,110, 4.87% prevalence). Not validated for clinical use. Not a medical device.
+    </div>
+    <p>NeuroPulse XAI &bull; SRM Institute of Science and Technology, Dept. of Computer Science and Engineering</p>
+    <p class="mt-4 text-xs" style="color:var(--text-muted)">Registration: RA2311003011560 &bull; Project: An Explainable Machine Learning Framework for Stroke Risk, Severity, and Functional Outcome Prediction</p>
+  </footer>
+
+  <!-- ================================================================
+       PRINT / REPORT MODAL
+       ================================================================ -->
+  <div class="modal-overlay hidden" id="reportModal" role="dialog" aria-modal="true" aria-label="Clinical audit report">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 style="font-size:var(--text-base)">Clinical audit report (1-Page Summary)</h2>
+        <button class="btn btn-ghost" id="btnCloseReport" aria-label="Close report">&#x2715;</button>
+      </div>
+      <div class="modal-body" id="printableReport">
+        <div class="report-section">
+          <h3>1. Patient profile</h3>
+          <div class="report-grid" id="reportPatientGrid"></div>
+        </div>
+        <div class="report-section">
+          <h3>2. Tri-pillar predictions</h3>
+          <div class="report-grid" id="reportPredGrid"></div>
+        </div>
+        <div class="report-section">
+          <h3>3. Top SHAP attributions (stroke risk model)</h3>
+          <div class="table-scroll-wrap">
+            <table aria-label="Report SHAP table">
+              <thead>
+                <tr>
+                  <th scope="col">Feature</th>
+                  <th scope="col">SHAP (&#966;)</th>
+                  <th scope="col">Direction</th>
+                </tr>
+              </thead>
+              <tbody id="reportShapBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="report-section">
+          <h3>4. Counterfactual interventions</h3>
+          <div id="reportInterventions"></div>
+        </div>
+        <div class="report-disclaimer" role="note">
+          This report is generated by a research prototype evaluated on the public Kaggle stroke cohort (N=5,110, 4.87% prevalence).
+          It has not been validated for clinical use and does not constitute medical advice.
+          Not a medical device. Generated: <span id="reportTimestamp"></span>.
+        </div>
+        <div class="mt-4 text-xs text-muted">
+          <strong>[Template field]</strong> Attending clinician signature: ______________________ Date: ________
+        </div>
+      </div>
+      <div class="modal-footer no-print">
+        <button class="btn btn-primary" onclick="window.print()" title="Print single-page clinical audit report">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;margin-right:6px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Clinical Audit (1-Page)
+        </button>
+        <a class="btn btn-secondary" id="btnDownloadAudit" href="/api/download/clinical-report" target="_blank" download="NeuroPulse_Clinical_Audit_Report.pdf" title="Download the verified 1-Page clinical audit summary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Audit PDF
+        </a>
+        <button class="btn btn-ghost" id="btnCloseReport2">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js?v=20261027_v7"></script>
+</body>
+</html>

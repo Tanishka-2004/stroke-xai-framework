@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Pytest / Cache
+.pytest_cache/
+.coverage
+htmlcov/
+catboost_info/
+
+# Temporary test print outputs
+test_print_*.pdf
+*.png
+!app/static/img/*.png
+!app/static/img/*.svg
+
+# OS generated
+.DS_Store
+Thumbs.db

@@ -1,0 +1,26 @@
+patient_id,age,gender,hypertension,systolic_bp,heart_disease,ever_married,work_type,residence_type,avg_glucose_level,bmi,total_cholesterol,smoking_status,physical_activity
+P-RSK-10000,63,Male,0,136,0,Yes,Self-employed,Urban,203.3,25.5,189.7,Unknown,2.2
+P-RSK-10001,53,Male,0,124,0,Yes,Private,Rural,122.1,17.8,233.7,never smoked,5.7
+P-RSK-10002,66,Male,0,130,0,Yes,Self-employed,Rural,108.7,28.9,217.1,never smoked,3.6
+P-RSK-10003,81,Male,1,136,1,Yes,Private,Urban,103.7,28.6,258.6,Unknown,3.2
+P-RSK-10004,51,Male,0,100,0,No,Self-employed,Rural,99.9,22.2,192.5,formerly smoked,2.8
+P-RSK-10005,51,Female,1,161,1,No,Private,Rural,103.9,33.8,222.4,Unknown,6.8
+P-RSK-10006,82,Female,1,141,0,Yes,Private,Urban,161.1,33.4,235.6,smokes,6.1
+P-RSK-10007,68,Female,0,111,0,Yes,Self-employed,Rural,219.6,25.3,222.7,never smoked,3.6
+P-RSK-10008,47,Male,0,127,0,Yes,Self-employed,Urban,113.6,17.3,218.2,Unknown,5.2
+P-RSK-10009,64,Male,1,147,0,Yes,Self-employed,Urban,96.2,22.3,260.5,never smoked,6.4
+P-RSK-10010,47,Male,0,95,0,No,Private,Rural,161.8,37.4,165.8,formerly smoked,6.7
+P-RSK-10011,47,Female,0,117,0,Yes,Self-employed,Urban,133.7,29.3,227.7,never smoked,6.1
+P-RSK-10012,59,Female,1,148,1,No,Govt_job,Urban,180.6,24.1,178.2,never smoked,6.3
+P-RSK-10013,22,Female,0,123,0,No,Private,Rural,97.9,36.4,172.3,smokes,3.1
+P-RSK-10014,26,Male,0,119,0,No,Self-employed,Rural,89.0,27.4,190.9,smokes,4.0
+P-RSK-10015,45,Female,0,116,0,Yes,Govt_job,Rural,155.8,28.6,218.9,formerly smoked,8.6
+P-RSK-10016,38,Male,1,157,0,Yes,Govt_job,Urban,94.2,42.4,223.2,never smoked,4.3
+P-RSK-10017,60,Female,1,154,0,No,Private,Rural,95.5,33.8,196.3,never smoked,3.7
+P-RSK-10018,40,Female,0,149,0,No,Private,Urban,76.7,26.8,236.1,smokes,7.7
+P-RSK-10019,31,Female,1,147,0,Yes,Govt_job,Rural,204.4,30.6,239.1,Unknown,3.8
+P-RSK-10020,80,Female,1,153,1,No,Self-employed,Urban,60.0,31.7,274.6,Unknown,4.0
+P-RSK-10021,51,Male,1,144,0,Yes,Private,Rural,152.3,33.3,189.6,never smoked,8.0
+P-RSK-10022,56,Female,1,141,1,No,Private,Rural,106.8,22.5,176.6,never smoked,3.4
+P-RSK-10023,31,Female,0,130,0,Yes,Private,Rural,115.2,38.0,209.4,formerly smoked,1.9
+P-RSK-10024,46,Male,0,138,0,Yes,Private,Rural,67.4,36.8,152.3,smokes,2.3

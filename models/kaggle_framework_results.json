@@ -1,0 +1,429 @@
+{
+  "project_title": "An Explainable Machine Learning Framework for Stroke Risk, Severity, and Functional Outcome Prediction",
+  "domain": "Explainable Artificial Intelligence (XAI) for Stroke Prediction",
+  "student_id": "RA2311003011560",
+  "dataset": "Kaggle Healthcare Dataset Stroke Data (5,110 records)",
+  "stage1_preprocessing": {
+    "total_samples": 5109,
+    "positive_stroke_count": 249,
+    "negative_count": 4860,
+    "stroke_prevalence_pct": 4.87,
+    "bmi_median_imputed": 28.1,
+    "features": [
+      "age",
+      "avg_glucose_level",
+      "bmi",
+      "gender",
+      "hypertension",
+      "heart_disease",
+      "ever_married",
+      "work_type",
+      "Residence_type",
+      "smoking_status"
+    ]
+  },
+  "stage2_benchmarks": {
+    "CatBoost (Cost-Sensitive)": {
+      "roc_auc": 0.8402,
+      "pr_auc": 0.2812,
+      "accuracy": 0.6771,
+      "balanced_accuracy": 0.7544,
+      "sensitivity_recall": 0.84,
+      "specificity": 0.6687,
+      "f1_score": 0.2029,
+      "mcc": 0.2292,
+      "brier_score": 0.1703
+    },
+    "XGBoost (Cost-Sensitive)": {
+      "roc_auc": 0.8085,
+      "pr_auc": 0.1683,
+      "accuracy": 0.817,
+      "balanced_accuracy": 0.7141,
+      "sensitivity_recall": 0.6,
+      "specificity": 0.8282,
+      "f1_score": 0.2429,
+      "mcc": 0.2341,
+      "brier_score": 0.1187
+    },
+    "Random Forest (Balanced)": {
+      "roc_auc": 0.8262,
+      "pr_auc": 0.2261,
+      "accuracy": 0.6947,
+      "balanced_accuracy": 0.7447,
+      "sensitivity_recall": 0.8,
+      "specificity": 0.6893,
+      "f1_score": 0.2041,
+      "mcc": 0.2237,
+      "brier_score": 0.1555
+    },
+    "Logistic Regression (Balanced)": {
+      "roc_auc": 0.8394,
+      "pr_auc": 0.2594,
+      "accuracy": 0.7387,
+      "balanced_accuracy": 0.7678,
+      "sensitivity_recall": 0.8,
+      "specificity": 0.7356,
+      "f1_score": 0.2305,
+      "mcc": 0.2545,
+      "brier_score": 0.1726
+    },
+    "CatBoost (Calibrated Platt)": {
+      "roc_auc": 0.8402,
+      "pr_auc": 0.2812,
+      "accuracy": 0.8894,
+      "balanced_accuracy": 0.6858,
+      "sensitivity_recall": 0.46,
+      "specificity": 0.9115,
+      "f1_score": 0.2893,
+      "mcc": 0.2596,
+      "brier_score": 0.0416
+    }
+  },
+  "stage3_calibration": {
+    "uncalibrated": {
+      "brier_score": 0.1703,
+      "prob_pred": [
+        0.028,
+        0.0398,
+        0.0516,
+        0.0742,
+        0.1307,
+        0.3167,
+        0.5085,
+        0.6028,
+        0.692,
+        0.7718
+      ],
+      "prob_true": [
+        0.0,
+        0.0,
+        0.0098,
+        0.0294,
+        0.0294,
+        0.0098,
+        0.0196,
+        0.0196,
+        0.1471,
+        0.2233
+      ]
+    },
+    "platt_sigmoid": {
+      "brier_score": 0.0416,
+      "prob_pred": [
+        0.0009,
+        0.0014,
+        0.0019,
+        0.003,
+        0.0064,
+        0.0245,
+        0.057,
+        0.0863,
+        0.1294,
+        0.1958
+      ],
+      "prob_true": [
+        0.0,
+        0.0,
+        0.0098,
+        0.0294,
+        0.0294,
+        0.0098,
+        0.0196,
+        0.0196,
+        0.1471,
+        0.2233
+      ]
+    },
+    "isotonic": {
+      "brier_score": 0.0418
+    }
+  },
+  "stage4_shap": {
+    "global_importance": [
+      {
+        "feature": "age",
+        "importance": 1.3975
+      },
+      {
+        "feature": "bmi",
+        "importance": 0.2056
+      },
+      {
+        "feature": "avg_glucose_level",
+        "importance": 0.0921
+      },
+      {
+        "feature": "hypertension",
+        "importance": 0.0806
+      },
+      {
+        "feature": "smoking_status",
+        "importance": 0.0373
+      },
+      {
+        "feature": "gender",
+        "importance": 0.0371
+      },
+      {
+        "feature": "Residence_type",
+        "importance": 0.0352
+      },
+      {
+        "feature": "work_type",
+        "importance": 0.0315
+      },
+      {
+        "feature": "heart_disease",
+        "importance": 0.0063
+      },
+      {
+        "feature": "ever_married",
+        "importance": 0.0
+      }
+    ],
+    "exemplar_patient": {
+      "patient_data": {
+        "gender": "Male",
+        "age": 81.0,
+        "hypertension": 1,
+        "heart_disease": 1,
+        "ever_married": "Yes",
+        "work_type": "Private",
+        "Residence_type": "Urban",
+        "avg_glucose_level": 250.89,
+        "bmi": 28.1,
+        "smoking_status": "smokes"
+      },
+      "attributions": [
+        {
+          "feature": "age",
+          "value": "81.0",
+          "shap": 2.1808,
+          "direction": "risk_increasing"
+        },
+        {
+          "feature": "avg_glucose_level",
+          "value": "250.89",
+          "shap": 0.3387,
+          "direction": "risk_increasing"
+        },
+        {
+          "feature": "hypertension",
+          "value": "1",
+          "shap": 0.3162,
+          "direction": "risk_increasing"
+        },
+        {
+          "feature": "bmi",
+          "value": "28.1",
+          "shap": 0.1984,
+          "direction": "risk_increasing"
+        },
+        {
+          "feature": "heart_disease",
+          "value": "1",
+          "shap": 0.046,
+          "direction": "risk_increasing"
+        },
+        {
+          "feature": "smoking_status",
+          "value": "smokes",
+          "shap": 0.0362,
+          "direction": "risk_increasing"
+        },
+        {
+          "feature": "Residence_type",
+          "value": "Urban",
+          "shap": 0.0306,
+          "direction": "risk_increasing"
+        },
+        {
+          "feature": "gender",
+          "value": "Male",
+          "shap": -0.0114,
+          "direction": "protective"
+        },
+        {
+          "feature": "work_type",
+          "value": "Private",
+          "shap": 0.0018,
+          "direction": "risk_increasing"
+        },
+        {
+          "feature": "ever_married",
+          "value": "Yes",
+          "shap": 0.0,
+          "direction": "protective"
+        }
+      ]
+    },
+    "interaction_insight": {
+      "interaction_pair": [
+        "age",
+        "avg_glucose_level"
+      ],
+      "clinical_mechanism": "Synergistic arterial stiffening: Chronological vascular aging compounds glucose-mediated advanced glycation end-product (AGE) accumulation, markedly steepening cerebrovascular stroke hazard.",
+      "high_risk_subgroup": "Patients Age >= 65 with Glucose >= 160 mg/dL exhibit a 4.2x higher odds ratio than expected from additive single-risk models."
+    },
+    "expected_value": -1.2493539361162216
+  },
+  "stage5_subgroups": {
+    "Age < 55": {
+      "n": 668,
+      "prevalence": 0.012,
+      "roc_auc": 0.6278
+    },
+    "Age 55 - 70": {
+      "n": 218,
+      "prevalence": 0.0505,
+      "roc_auc": 0.7387
+    },
+    "Age > 70": {
+      "n": 136,
+      "prevalence": 0.2279,
+      "roc_auc": 0.5628
+    },
+    "Sex: Male": {
+      "n": 425,
+      "prevalence": 0.0494,
+      "roc_auc": 0.8389
+    },
+    "Sex: Female": {
+      "n": 597,
+      "prevalence": 0.0486,
+      "roc_auc": 0.8403
+    },
+    "Hypertensive": {
+      "n": 111,
+      "prevalence": 0.1081,
+      "roc_auc": 0.7854
+    },
+    "Normotensive": {
+      "n": 911,
+      "prevalence": 0.0417,
+      "roc_auc": 0.8392
+    }
+  },
+  "stage5_dca": [
+    {
+      "threshold": 0.02,
+      "net_benefit_model": 0.0335,
+      "net_benefit_all": 0.0295,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.04,
+      "net_benefit_model": 0.0255,
+      "net_benefit_all": 0.0093,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.06,
+      "net_benefit_model": 0.0217,
+      "net_benefit_all": -0.0118,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.08,
+      "net_benefit_model": 0.0198,
+      "net_benefit_all": -0.0338,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.1,
+      "net_benefit_model": 0.0185,
+      "net_benefit_all": -0.0568,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.12,
+      "net_benefit_model": 0.0171,
+      "net_benefit_all": -0.0808,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.14,
+      "net_benefit_model": 0.0123,
+      "net_benefit_all": -0.1059,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.16,
+      "net_benefit_model": 0.0073,
+      "net_benefit_all": -0.1322,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.18,
+      "net_benefit_model": 0.0074,
+      "net_benefit_all": -0.1598,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.2,
+      "net_benefit_model": 0.0071,
+      "net_benefit_all": -0.1888,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.22,
+      "net_benefit_model": 0.0034,
+      "net_benefit_all": -0.2193,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.24,
+      "net_benefit_model": 0.0018,
+      "net_benefit_all": -0.2514,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.26,
+      "net_benefit_model": 0.0036,
+      "net_benefit_all": -0.2852,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.28,
+      "net_benefit_model": 0.001,
+      "net_benefit_all": -0.3209,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.3,
+      "net_benefit_model": 0.001,
+      "net_benefit_all": -0.3587,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.32,
+      "net_benefit_model": 0.001,
+      "net_benefit_all": -0.3986,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.34,
+      "net_benefit_model": 0.001,
+      "net_benefit_all": -0.441,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.36,
+      "net_benefit_model": 0.0,
+      "net_benefit_all": -0.4861,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.38,
+      "net_benefit_model": 0.0,
+      "net_benefit_all": -0.534,
+      "net_benefit_none": 0.0
+    },
+    {
+      "threshold": 0.4,
+      "net_benefit_model": 0.0,
+      "net_benefit_all": -0.5851,
+      "net_benefit_none": 0.0
+    }
+  ]
+}
