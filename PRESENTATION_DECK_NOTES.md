@@ -1,143 +1,134 @@
-# NeuroPulse XAI — Presentation Deck & Speaker Notes
-**An Explainable Machine Learning Framework for Stroke Risk, Severity, and Functional Outcome Prediction on Imbalanced Clinical Data**
+# NeuroPulse XAI — Presentation Deck & Simple Speaking Guide
+**A Smart, Trustworthy AI Tool for Stroke Risk, Severity Check, and Recovery Odds**
 
 * **Author:** Tanishka Mudgal (Registration: RA2311003011560)
-* **Department:** Computing Technologies, SRM Institute of Science and Technology, Chennai, India
-* **Presentation File:** `NEUROPULSE_STROKE_XAI_PRESENTATION.pptx` (16:9 Widescreen, 15 Slides)
+* **Department:** Computing Technologies, SRM Institute of Science and Technology
+* **File:** `NEUROPULSE_STROKE_XAI_PRESENTATION.pptx` (16:9 Widescreen, 15 Slides)
 
 ---
 
-## Slide 1: Title Slide (Dark Theme)
-* **Header Badge:** IEEE TRANSACTIONS COMPLIANT RESEARCH
+## Slide 1: Title Slide
 * **Title:** NeuroPulse XAI
-* **Subtitle:** An Explainable Machine Learning Framework for Stroke Risk, Severity, and Functional Outcome Prediction on Imbalanced Clinical Data
-* **Presenter:** Tanishka Mudgal (RA2311003011560)
-* **Institution:** Department of Computing Technologies, SRM Institute of Science and Technology
-* **Core Stack:** CatBoost • Platt Calibration • TreeSHAP • Decision Curve Analysis
+* **Subtitle:** A Smart, Trustworthy AI Tool for Stroke Risk Prediction, Severity Check, and Recovery Odds
+* **Presenter:** Tanishka Mudgal (RA2311003011560), Department of Computing Technologies, SRMIST
+* **One-Sentence Goal:** Helping doctors spot stroke dangers early with honest odds and clear explanations they can actually trust.
 
 ---
 
-## Slide 2: Executive Summary & Project Mission
-* **The Clinical Dilemma:** Stroke is the #2 leading cause of death globally (6.6M deaths, 143M DALYs annually). In acute ischemic stroke, 1.9 million neurons die every minute. Early detection and prophylactic intervention are life-saving, but traditional bedside calculators (Framingham, CHA2DS2-VASc) rely on linear heuristics that miss synergistic biological risks.
-* **The AI Translation Barrier:** While machine learning can capture non-linear patterns, existing models fail in three critical dimensions: minority class imbalance (<5%), severely distorted probability calibration, and black-box opacity.
-* **The NeuroPulse Solution:** An end-to-end 5-Stage framework evaluated on the Kaggle Stroke cohort ($N=5,110$) delivering high acute sensitivity (84%), honest Platt-calibrated probabilities (75.6% Brier reduction), and actionable TreeSHAP explanations.
+## Slide 2: The Big Picture (Why Did We Build This?)
+1. **The Medical Danger:** Stroke is the #2 killer in the world. When a blood clot blocks blood to the brain, about 2 million brain cells die every single minute! Catching it early saves lives and prevents paralysis.
+2. **Why Old Methods Fail:** Doctors today still use basic point-based score sheets on paper. These simple sheets add numbers one by one, so they completely miss combined dangers — like how high blood pressure becomes 5x more dangerous when mixed with high blood sugar in older people.
+3. **Why Regular AI Fails:** Standard machine learning models either miss strokes completely (because strokes are rare), exaggerate and give scary fake percentages (like telling a healthy person they have a 40% risk), or refuse to explain *why* they gave an answer.
 
 ---
 
-## Slide 3: The Problem Statement (The 3 Critical Barriers)
-1. **Extreme Minority Class Imbalance:**
-   * Positive stroke events occur in $<5\%$ of screened cohorts ($4.87\%$ in Kaggle, a $19.54:1$ imbalance ratio).
-   * Unweighted algorithms collapse into majority voting: achieving $>95\%$ raw accuracy while failing to detect life-threatening strokes (0% recall).
-   * Synthetic oversampling (SMOTE) generates non-physiological artifacts in tabular clinical data.
-2. **Distorted Probability Calibration:**
-   * When loss weighting or sampling is used to force sensitivity, model output logits are shifted positive.
-   * A patient with an actual $5\%$ epidemiological risk receives an uncalibrated raw predicted score of $38.74\%$, creating unnecessary clinical alarm and overtreatment.
-3. **Black-Box Opacity & Inscrutability:**
-   * Deep models and complex tree ensembles do not expose their internal decision rationale.
-   * Attending physicians cannot verify whether a prediction is driven by legitimate biomarkers or dataset bias, preventing bedside clinical adoption.
+## Slide 3: The Problem Statement (3 Big Roadblocks)
+1. **Problem 1: Strokes Are Rare in Screenings:** Less than 5 out of 100 people screened have had a stroke. If an AI model simply guesses "No stroke" for everyone, it looks 95% accurate on paper, but it missed 100% of the sick patients!
+2. **Problem 2: Exaggerated Odds:** When programmers try to force the AI to catch strokes, the computer panics. A person whose actual risk is 5% gets told they have a 40% risk, causing panic and expensive hospital tests they never needed.
+3. **Problem 3: The "Black Box":** Most AI models can't explain why they gave a prediction. Doctors cannot risk patient lives on mystery computer guesses.
 
 ---
 
-## Slide 4: What The System Does (Core Solution)
-* **5-Stage Calibrated Machine Learning Pipeline:**
-  1. *Stage 1:* Leakage-free clinical preprocessing with train-median imputation ($28.1\text{ kg/m}^2$) and 80/20 stratified split.
-  2. *Stage 2:* Cost-sensitive CatBoost classification with $19.54:1$ inverse class weighting, securing $84.00\%$ acute sensitivity ($42/50$ strokes).
-  3. *Stage 3:* 5-fold out-of-fold Platt sigmoid calibration, reducing Brier score by $75.6\%$ ($0.0416$), strictly matching population prevalence ($4.87\%$).
-  4. *Stage 4:* Game-theoretic TreeSHAP feature attributions and second-order interaction matrices (Age $\times$ Glucose synergy).
-  5. *Stage 5:* Reliable multi-dimensional clinical evaluation: demographic subgroup fairness audits and Decision Curve Analysis.
-* **Tri-Pillar Bedside Clinical Scope:**
-  * *Pillar 1:* 10-Year Long-Term Stroke Risk Probability & Tiers (Low, Moderate, High, Critical).
-  * *Pillar 2:* Acute Neurological Deficit Severity via bedside NIHSS score ($0\text{--}42$).
-  * *Pillar 3:* 90-Day Functional Independence Recovery ($\text{mRS} \le 2$) conditioned on reperfusion therapy (IV tPA, EVT).
+## Slide 4: What Does Our System Do? (The Solution)
+* **Our 5-Stage Smart Pipeline (Tested on 5,110 real patient records from Kaggle):**
+  1. *Clean Data:* Fills in missing health numbers cleanly without peeking at the test set.
+  2. *Fair Training:* Heavily penalizes the AI whenever it misses a stroke, training it never to ignore rare cases.
+  3. *Honest Percentages:* Recalibrates the probabilities so 5% really means 5%, not 40%.
+  4. *Full Explanations:* Tells doctors exactly which body factors pushed the risk up or down.
+  5. *Quality Check:* Proves the model is equally fair to men, women, young, and old alike.
+* **3 Clinical Predictions in One Single Tool:**
+  1. *Long-Term Stroke Risk:* Honest 10-year stroke chance (Low, Moderate, High, or Critical).
+  2. *Acute Stroke Severity (NIHSS):* Scores current emergency symptoms (face droop, arm weakness, speech trouble) from 0 to 42.
+  3. *90-Day Recovery Odds:* Predicts if the patient will walk and live normally after 3 months if given clot-busting medicine or surgery.
 
 ---
 
-## Slide 5: Domain Keywords & Scientific Glossary
-* **Explainable AI (XAI):** Methodologies enabling AI decision pathways to be audited and pathophysiologically verified by clinicians.
-* **TreeSHAP (Shapley Additive exPlanations):** Game-theoretic feature attribution allocating credit $\phi_j$ to each biological biomarker.
-* **Platt Sigmoid Calibration:** Logistic transformation mapping uncalibrated ensemble logits into reliable posterior probabilities: $\hat{P} = 1 / (1 + e^{A \cdot f + B})$.
-* **Brier Score:** Mean squared error between predicted probabilities and binary outcomes; measures calibration accuracy: $\text{BS} = \frac{1}{N}\sum (P_i - Y_i)^2$.
-* **Cost-Sensitive Learning:** Directly penalizing minority-class errors via loss reweighting ($19.54:1$) in the log-loss objective.
-* **Decision Curve Analysis (DCA):** Evaluates clinical Net Benefit across decision thresholds, proving utility over treat-all and treat-none strategies.
-* **Subgroup Algorithmic Fairness:** Stratifying evaluation across demographic brackets to ensure no bias across Age, Sex, or Hypertension.
-* **NIHSS & mRS:** National Institutes of Health Stroke Scale (acute deficit: $0\text{--}42$) and modified Rankin Scale (functional independence: $0\text{--}6$).
+## Slide 5: Key Concepts Explained in Plain English
+* **Explainable AI (XAI):** AI that shows its work and explains its reasons instead of guessing in secret.
+* **SHAP (The Explainer):** A tool that gives credit to each body feature (like age, smoking, or sugar) for pushing risk up or down.
+* **Calibration (Honest Odds):** Fixing the AI's math so its percentages are real: if it says 5% risk, 5 out of 100 people actually have it.
+* **Brier Score (Error Meter):** Measures how honest the AI's percentages are. A lower score means much more trustworthy odds.
+* **Class Imbalance:** When sick cases are rare (only 5 in 100). The AI needs special rules so it doesn't ignore them.
+* **What-If (Counterfactual):** Asking: "What if this patient drops their blood pressure by 20 points? How much safer will they be?"
+* **Decision Curve (Net Benefit):** Mathematical proof that using this tool helps more patients than treating everyone or doing nothing.
+* **NIHSS & Recovery Score:** Standard medical checklists doctors use to measure stroke damage and 3-month recovery.
 
 ---
 
-## Slide 6: Complete Technology Stack
-* **Machine Learning & Modeling:**
-  * CatBoost (Oblivious Trees, Ordered Target Encoding, native categorical handling)
-  * Scikit-Learn (Logistic Regression, Random Forest, CalibratedClassifierCV)
-  * XGBoost (Cost-sensitive gradient boosting)
-  * NumPy & Pandas (Data pipelines, imputation)
-* **Explainability & Validation:**
-  * TreeSHAP (Local waterfall breakdowns & global importance rankings)
-  * Platt Sigmoid Calibration (5-fold out-of-fold CV)
-  * Decision Curve Analysis (Vickers Net Benefit)
-* **Backend Architecture:**
-  * Python 3.14 runtime
-  * FastAPI (Asynchronous high-performance REST API)
-  * Uvicorn ASGI server
-* **Frontend & UX:**
-  * Vanilla CSS3 with glassmorphic modern design system
-  * Responsive Vanilla JavaScript
-  * Chart.js (Real-time dynamic visualizations)
-  * HTML5 Print Emulation Engine (Single-page certified audit PDF export)
+## Slide 6: What Tech Did We Use? (Under the Hood)
+* **Machine Learning Core:**
+  * *CatBoost:* A top-tier decision-tree model designed specifically for medical tables that handles rare stroke cases without getting confused.
+  * *Scikit-Learn & XGBoost:* Used for baseline comparisons and cross-validation.
+* **Explainability & Math:**
+  * *TreeSHAP:* Breaks open the AI to show green/red factor bars.
+  * *Platt Scaling:* The formula that fixes inflated percentages.
+* **Backend Web Engine:**
+  * *Python 3.14 + FastAPI:* Fast, lightweight server handling patient calculations in milliseconds.
+* **User Interface & Design:**
+  * *Modern HTML & CSS:* Clean, beautiful glass-styled interface.
+  * *JavaScript + Chart.js:* Smooth interactive sliders and live risk dials.
+  * *PDF Engine:* 1-click printable doctor reports.
 
 ---
 
-## Slides 7–12: Tab-by-Tab Walkthrough (With UI Screenshots)
+## Slides 7–12: What Each Tab Does (Walkthrough With Screenshots)
 
-### Tab 1: Tri-Pillar Clinical Assessment & Certified Audit
-* **Inputs:** Patient demographics, vitals, acute deficit checklist (NIHSS items), and emergency intervention toggles (tPA / EVT).
-* **Outputs:** Real-time Platt-calibrated risk gauge, emergency triage badge, and 90-day recovery likelihood.
-* **Export:** One-click single-page certified clinical audit report with vitals, predictions, SHAP attribution bars, and attending physician sign-off line.
+### Tab 1: Patient Checkup & Printable Doctor Report
+* Enter simple patient details: age, blood pressure, glucose, smoking, and symptoms.
+* Get instant risk % dial, emergency NIHSS score, and 3-month recovery odds.
+* Click **"Clinical Audit Report"** to open a clean 1-page paper report with doctor signature line ready for hospital charts.
 
-### Tab 2: Interactive Counterfactual "What-If" Studio
-* **Purpose:** Translates abstract probabilities into actionable preventative guidance.
-* **Interventions:**
-  * Blood pressure optimization ($<130\text{ mmHg}$) $\rightarrow$ $4.5\%$ to $8.2\%$ absolute risk reduction.
-  * Glycemic regulation ($<100\text{ mg/dL}$) $\rightarrow$ $2.1\%$ to $4.8\%$ absolute risk reduction.
-  * Smoking cessation $\rightarrow$ removes tobacco hazard.
+### Tab 2: "What-If" Simulator (Actionable Goals)
+* Shows patients how to lower their risk:
+  * Lowering blood pressure drops stroke risk by 4% to 8%.
+  * Controlling blood sugar drops risk by 2% to 5%.
+  * Quitting smoking erases the tobacco danger completely.
+* Gives doctors a clear roadmap to motivate patients during checkups.
 
-### Tab 3: SHAP Studio (Mechanistic Transparency)
-* **Global Rankings:** Age ($|\phi|=1.3975$) $>$ BMI ($0.2056$) $>$ Avg Glucose ($0.0921$) $>$ Hypertension ($0.0806$) $>$ Smoking ($0.0373$).
-* **Local Waterfall:** Shows exact positive (red) and negative (blue) forces moving patient log-odds from baseline ($\phi_0$).
-* **Synergy Insight:** Age $\times$ Glucose interaction proves high glucose amplifies stroke log-odds by $5.75\times$ in patients $>65$ vs $<45$.
+### Tab 3: SHAP Explainer (Peeking Inside the AI)
+* Ranked biggest health factors: Age $>$ Body Mass (BMI) $>$ Blood Sugar $>$ High Blood Pressure $>$ Smoking.
+* Waterfall chart: Red bars push the patient into danger; Blue bars protect them.
+* Key discovery: High sugar is almost 6x more dangerous in seniors over 65 than in young people!
 
-### Tab 4: Comparative Model Benchmarks
-* **Held-Out Test Set ($N=1,022$, 50 events):**
-  * CatBoost achieves highest acute sensitivity: **$84.00\%$** ($42/50$ strokes detected).
-  * $5.77\times$ PR-AUC enrichment: **$0.2812$** vs XGBoost ($0.1683$) and Random Forest ($0.2261$).
-  * Lowest calibration loss: **$0.0416$** Brier score.
+### Tab 4: Model Benchmarks (Proving It Works)
+* Tested on 1,022 unseen real patients from Kaggle.
+* CatBoost caught **84% of real strokes** (42 out of 50), beating Random Forest (76%) and XGBoost (60%).
+* Cut percentage errors by **75%**, proving our odds are honest and dependable.
 
-### Tab 5: Kaggle 5-Stage Framework Audit
-* **Methodological Integrity:** Exposes all 5 stages directly in the interface.
-* **Fairness Audit:** Confirms biological sex parity ($0.8389$ male vs $0.8403$ female) and highlights the $55\text{--}70$ yr preventative sweet spot ($0.7387$ AUC).
-* **DCA Curve:** Shows positive Net Benefit ($+0.0185$ at $10\%$ threshold) where blanket treatment causes net harm ($-0.0568$).
+### Tab 5: Framework Audit (Proving It's Fair & Honest)
+* Proves the AI was trained cleanly without peeking at test answers.
+* Proves zero gender bias: accuracy is identical between men (0.8389) and women (0.8403).
+* Net Benefit curve proves this tool catches 1.85 extra true strokes per 100 people without false alarms.
 
-### Tab 6: Institutional Batch Screening Engine
-* **Capability:** Upload multi-patient CSV files for institutional health screening.
-* **Triage:** Automatically stratifies cohorts into Low, Moderate, High, and Critical risk tiers.
-* **Population Drivers:** Aggregates SHAP attributions across batches to reveal prevalent community risk factors.
-
----
-
-## Slide 13: Clinical Effectiveness & Real-World Utility
-1. **Safety-First Sensitivity:** $84\%$ acute recall minimizes missed diagnoses of catastrophic vascular events.
-2. **Epidemiological Honesty:** $75.6\%$ Brier score reduction prevents clinical false alarms.
-3. **Actionable Counseling:** Counterfactual simulations provide clear targets for preventative patient care.
-4. **Bedside Workflow Ready:** Certified 1-page report integrates smoothly into EHR workflows.
+### Tab 6: Hospital Group Screening (Batch Upload)
+* Allows clinics and hospitals to upload a spreadsheet (CSV) of hundreds of patients at once.
+* Automatically sorts people into Green (Low), Yellow (Moderate), Orange (High), and Red (Critical).
+* Shows the community's biggest problem (e.g., "65% of your high-risk patients have uncontrolled blood pressure").
 
 ---
 
-## Slide 14: Limitations & Future Horizons
-* **Limitations:** Age-bracket sample disparity in extreme age groups ($<55$ and $>70$ yrs); absence of acute neuroimaging (CT/MRI); research prototype regulatory status.
-* **Roadmap:** Multimodal fusion with Vision Transformers (ViT) on brain CT/MRI; hospital EHR integration via HL7 FHIR; prospective multi-center trials.
+## Slide 13: Why Is This Truly Useful in Real Life?
+1. **Saves Real Lives:** 84% stroke detection means doctors don't send high-risk patients home by mistake.
+2. **Honest Percentages:** 75% error reduction stops false alarms and eliminates patient panic.
+3. **Actionable Health Goals:** Shows patients exact proof that lifestyle changes cut their danger.
+4. **Hospital Ready:** 1-page printable medical report is ready to sign and file in under 2 minutes.
+
+---
+
+## Slide 14: Honest Limitations & Next Steps
+* **Current Limitations:**
+  1. Works best for ages 55–70 (strokes in people under 55 are very rare, so data is sparse).
+  2. Uses clinical numbers only; doesn't look at brain picture scans (CT/MRI) yet.
+  3. It's a decision-support assistant to help doctors, not replace them.
+* **Future Plans:**
+  1. Add Brain CT & MRI scan image AI.
+  2. Connect directly to hospital computer record systems (EHR).
+  3. Test across hospitals in multiple cities and countries.
 
 ---
 
 ## Slide 15: Conclusion & Contact
 * **Researcher:** Tanishka Mudgal (RA2311003011560)
-* **Institution:** Department of Computing Technologies, SRM Institute of Science and Technology
-* **Repository:** `https://github.com/Tanishka-2004/stroke-xai-framework`
+* **Department:** Computing Technologies, SRM Institute of Science and Technology
+* **Project Code:** `https://github.com/Tanishka-2004/stroke-xai-framework`
+* **Takeaway:** Turning complicated AI into simple, honest, life-saving advice doctors can actually trust.
