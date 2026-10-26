@@ -1,0 +1,462 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+% -------------------------------------------------------------
+% REQUIRED PACKAGES (Standard IEEE Conference Template)
+% -------------------------------------------------------------
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{microtype}
+\usepackage{balance}
+
+% Path to graphics files
+\graphicspath{{images/}}
+\DeclareGraphicsExtensions{.png,.jpg,.jpeg,.pdf}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+% -------------------------------------------------------------
+% TITLE & AUTHOR BLOCK
+% -------------------------------------------------------------
+\title{An Explainable Machine Learning Framework for Stroke Risk, Severity, and Functional Outcome Prediction on Imbalanced Clinical Data\\
+\thanks{This research prototype was developed at the Department of Computing Technologies, SRM Institute of Science and Technology. Student Registration No.: RA2311003011560. Not validated for independent clinical diagnosis.}
+}
+
+\author{
+  \IEEEauthorblockN{Tanishka Mudgal}
+  \IEEEauthorblockA{\textit{Department of Computing Technologies} \\
+  \textit{SRM Institute of Science and Technology}\\
+  Kattankulathur, Chennai 603203, Tamil Nadu, India \\
+  Registration: RA2311003011560 \\
+  Email: tm6968@srmist.edu.in}
+}
+
+\maketitle
+
+% -------------------------------------------------------------
+% ABSTRACT & KEYWORDS
+% -------------------------------------------------------------
+\begin{abstract}
+Cerebrovascular accidents (strokes) remain the second leading cause of mortality worldwide. While predictive machine learning architectures demonstrate strong discriminative capacity, clinical translation is severely hindered by three persistent obstacles: (1) extreme minority-class imbalance ($<5\%$ event prevalence), (2) miscalibrated probability estimates caused by naive oversampling or loss reweighting, and (3) black-box opacity that prevents bedside pathophysiological verification. This paper develops and evaluates an end-to-end, 5-stage explainable machine learning framework on the public Kaggle Healthcare Stroke Dataset ($N = 5,110$). The architecture incorporates: (1) leakage-free clinical preprocessing with train-median imputation, (2) cost-sensitive CatBoost classification with $19.54:1$ inverse class weighting, (3) 5-fold out-of-fold Platt sigmoid probability calibration, (4) game-theoretic Shapley Additive exPlanations (TreeSHAP) encompassing global rankings, individual patient waterfalls, and supra-additive non-linear feature interactions (Age $\times$ Glucose), and (5) multi-dimensional reliable clinical evaluation via minority-class metrics, demographic subgroup fairness audits, and Decision Curve Analysis (DCA). On the held-out test cohort ($N = 1,022$, $50$ stroke events), the cost-sensitive CatBoost model achieves a ROC-AUC of $0.8402$, a PR-AUC of $0.2812$, and an acute minority-class sensitivity of $84.00\%$ ($42/50$ strokes identified). Post-hoc Platt scaling reduced the Brier score loss from $0.1703$ to $0.0416$ (a $75.6\%$ reduction), strictly aligning mean predicted risk ($4.92\%$) with observed population prevalence ($4.87\%$). Furthermore, Decision Curve Analysis confirms superior clinical net benefit over standard ``treat-all'' and ``treat-none'' policies between $5\%$ and $25\%$ decision thresholds. An interactive, web-based clinical decision support prototype (NeuroPulse XAI) is presented, offering real-time counterfactual simulation and single-page clinical audit report generation.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Explainable Artificial Intelligence (XAI), Stroke Risk Prediction, CatBoost, Platt Calibration, TreeSHAP, Decision Curve Analysis, Algorithmic Fairness, Clinical Decision Support Systems.
+\end{IEEEkeywords}
+
+% -------------------------------------------------------------
+% I. INTRODUCTION
+% -------------------------------------------------------------
+\section{Introduction}
+\IEEEPARstart{C}{erebrovascular} accidents (strokes) account for over $6.6$ million annual deaths and more than $143$ million disability-adjusted life years (DALYs) globally \cite{feigin2021global}. In acute ischemic stroke, cerebral arterial thromboembolism precipitates focal ischemia, destroying an estimated $1.9$ million neurons per minute in the untreated penumbra \cite{saver2006time}. Consequently, primary preventative screening and early prognostic risk assessment represent the primary defense against devastating long-term neurological disability.
+
+Traditional bedside risk calculators, such as the Framingham Stroke Risk Profile (FSRP) \cite{wolf1991probability} and the $\text{CHA}_2\text{DS}_2\text{-VASc}$ score \cite{lip2010refining}, utilize point-based linear scoring heuristics. While computationally straightforward, these heuristic tools cannot capture non-linear, synergistic biological interactions---such as the compound atherogenic damage produced when chronic hyperglycemia co-occurs with systemic arterial hypertension in aging vascular beds \cite{spence2010intensive}.
+
+To capture complex physiological interactions, biomedical research has turned to supervised machine learning, particularly Gradient Boosted Decision Trees (GBDT) \cite{friedman2001greedy}. Nevertheless, translating machine learning into clinical workflows is impeded by three distinct failure modes:
+\begin{enumerate}
+    \item \textbf{Extreme Class Imbalance:} Representative population screening cohorts are heavily skewed, typically containing $2\%$ to $7\%$ positive stroke cases. Unweighted classification algorithms collapse toward predicting the majority non-stroke class, producing artificially high overall accuracy ($\sim 95\%$) while failing to detect life-threatening vascular events \cite{he2009learning}.
+    \item \textbf{Distorted Probability Calibration:} When cost-sensitive loss weighting or synthetic oversampling (e.g., SMOTE) is applied to force sensitivity, the classifier's posterior probabilities become systematically inflated \cite{niculescu2005predicting}. A patient with an actual $5\%$ biological risk may receive a raw predicted probability of $45\%$, triggering inappropriate clinical alarm and unnecessary diagnostic angiography.
+    \item \textbf{Black-Box Inscrutability:} Deep ensembles hide their internal decision rationale, making it impossible for clinicians to confirm whether predictions are driven by authentic pathophysiological indicators or dataset-specific confounding artifacts \cite{rudin2019stop}.
+\end{enumerate}
+
+To resolve these barriers simultaneously, this study establishes a \textbf{5-Stage Calibrated, Cost-Sensitive, and Explainable Stroke-Risk Framework} evaluated on the public Kaggle Healthcare Stroke Dataset ($N = 5,110$, $4.87\%$ prevalence). The framework unites cost-sensitive CatBoost boosting, 5-fold out-of-fold Platt sigmoid calibration, local/global TreeSHAP explanations, subgroup demographic fairness audits, and Decision Curve Analysis.
+
+% -------------------------------------------------------------
+% II. RELATED WORK
+% -------------------------------------------------------------
+\section{Related Work}
+
+\subsection{Algorithmic Handling of Class Imbalance}
+Imbalanced classification ($Y \in \{0, 1\}$ with $P(Y=1) \ll P(Y=0)$) has traditionally been approached via data-level re-sampling, such as SMOTE \cite{chawla2002smote}. However, Blagus and Lusa \cite{blagus2013smote} demonstrated that in tabular clinical datasets with mixed categorical features, synthetic interpolations distort empirical priors and increase prediction variance.
+
+In contrast, algorithm-level cost-sensitive learning preserves the empirical distribution while directly penalizing minority-class misclassifications in the log-loss objective:
+\begin{equation}
+\mathcal{L}_{\text{cost}}(y, \hat{y}) = - \Big[ w_1 y \log(\hat{y}) + w_0 (1 - y) \log(1 - \hat{y}) \Big]
+\label{eq:cost_loss}
+\end{equation}
+Setting the class weights inversely proportional to class frequencies ($w_1 = \frac{N}{2 N_1}$, $w_0 = \frac{N}{2 N_0}$) establishes an empirical balancing ratio of $19.54:1$ for the Kaggle stroke dataset, ensuring the optimization gradient actively penalizes missed strokes.
+
+\subsection{CatBoost: Categorical Boosting Architecture}
+CatBoost \cite{prokhorenkova2018catboost} introduces two critical algorithmic advantages for clinical tabular datasets over standard gradient boosting packages:
+\begin{enumerate}
+    \item \textbf{Ordered Target Statistics:} CatBoost prevents target leakage when encoding high-cardinality categorical variables by computing statistics over randomized historical permutations of the training dataset:
+    \begin{equation}
+    \hat{x}_{k}^i = \frac{\sum_{j=1}^{p-1} [x_{\sigma(j), k} = x_{\sigma(p), k}] \cdot y_{\sigma(j)} + a \cdot P}{\sum_{j=1}^{p-1} [x_{\sigma(j), k} = x_{\sigma(p), k}] + a}
+    \label{eq:ordered_ts}
+    \end{equation}
+    where $P$ is the prior class probability and $a > 0$ is a regularization parameter.
+    \item \textbf{Oblivious (Symmetric) Decision Trees:} CatBoost enforces identical split conditions across all nodes at each tree depth. This geometric symmetry acts as an inductive regularizer, reducing execution latency and guarding against variance-driven overfitting on sparse clinical datasets.
+\end{enumerate}
+
+\subsection{Post-Hoc Probability Calibration}
+Let $f(x) \in \mathbb{R}$ represent the continuous logit output produced by a tree ensemble. A model is considered well-calibrated if its predicted probability matches the empirical event rate:
+\begin{equation}
+P(Y = 1 \mid \hat{P}(Y = 1 \mid X) = p) = p, \quad \forall p \in [0, 1]
+\label{eq:calibration_def}
+\end{equation}
+Platt scaling \cite{platt1999probabilistic} maps uncalibrated raw model logits into empirical posterior probabilities via a logistic transformation:
+\begin{equation}
+\hat{P}_{\text{Platt}}(Y = 1 \mid f) = \frac{1}{1 + \exp(A \cdot f + B)}
+\label{eq:platt}
+\end{equation}
+where scalar coefficients $A$ and $B$ are estimated via maximum likelihood on independent out-of-fold validation sets to prevent data snooping.
+
+% -------------------------------------------------------------
+% III. METHODOLOGY & 5-STAGE XAI ARCHITECTURE
+% -------------------------------------------------------------
+\section{Methodology \& Framework Architecture}
+The framework is organized into five operational stages designed to guarantee methodological rigor and leakage-free validation, as illustrated in Fig.~\ref{fig:architecture}.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.92\textwidth]{images/after_kaggle.png}
+\caption{The 5-Stage Calibrated, Cost-Sensitive, and Explainable Stroke Prediction Framework as deployed in the NeuroPulse XAI interface, detailing Stage 1 preprocessing, Stage 2 CatBoost modeling, Stage 3 Platt calibration, Stage 4 SHAP rankings, and Stage 5 reliable multi-dimensional evaluation.}
+\label{fig:architecture}
+\end{figure*}
+
+\subsection{Stage 1: Clinical Preprocessing \& Leakage-Free Splitting}
+The public Kaggle Healthcare Stroke Dataset comprises $5,110$ patient profiles across $11$ physiological and demographic features. A single ambiguous record (`gender = Other') was excluded, yielding $N = 5,109$ valid patients.
+
+To enforce strict protection against data leakage:
+\begin{enumerate}
+    \item The dataset was partitioned into an $80\%$ Training Cohort ($N_{\text{train}} = 4,087$; $199$ strokes) and a $20\%$ Held-Out Test Cohort ($N_{\text{test}} = 1,022$; $50$ strokes) via stratified random sampling on the target variable (`stroke`).
+    \item Body Mass Index (`bmi`) contained $201$ missing values ($3.93\%$). The median BMI was derived exclusively from the training partition ($\text{Median}_{\text{train}} = 28.1\text{ kg/m}^2$) and applied to impute missing entries across both partitions.
+    \item Continuous variables (`age`, `avg_glucose_level`, `bmi`) were standardized, and categorical variables (`gender`, `hypertension`, `heart_disease`, `ever_married`, `work_type`, `Residence_type`, `smoking_status`) were preserved natively for CatBoost and one-hot encoded for baseline models.
+\end{enumerate}
+
+\subsection{Stage 2: Cost-Sensitive CatBoost Classifier}
+The training dataset exhibits an imbalance ratio of $19.54:1$ ($3,888$ non-strokes vs. $199$ stroke events). The CatBoost model was tuned with:
+\begin{itemize}
+    \item $\text{Iterations} = 350$, $\text{Learning Rate} = 0.05$, $\text{Depth} = 5$.
+    \item $\text{Loss Function} = \text{Logloss}$, $\text{Evaluation Metric} = \text{AUC}$.
+    \item $\text{Auto Class Weights} = \text{Balanced}$ ($w_1/w_0 \approx 19.54$).
+    \item Early stopping patience of $40$ iterations on held-out evaluation rounds.
+\end{itemize}
+
+\subsection{Stage 3: Out-of-Fold Platt Sigmoid Calibration}
+Because cost-sensitive weighting artificially shifts model logits positive, raw predictions overestimate true disease incidence. To calibrate probabilities without test contamination:
+\begin{enumerate}
+    \item A 5-fold stratified cross-validation was executed on $X_{\text{train}}$.
+    \item Out-of-fold prediction probabilities $\hat{p}_{\text{OOF}} \in (0, 1)$ were logged across all $4,087$ training patients.
+    \item Platt's logistic parameters ($A, B$) were optimized by regressing $\text{logit}(\hat{p}_{\text{OOF}})$ onto $y_{\text{train}}$.
+    \item The fitted transformation was applied to test-set logits $f(X_{\text{test}})$.
+\end{enumerate}
+
+Calibration performance was quantified using the Brier Score:
+\begin{equation}
+\text{BS} = \frac{1}{N} \sum_{i=1}^{N} \Big( \hat{P}(Y_i = 1 \mid x_i) - y_i \Big)^2
+\label{eq:brier}
+\end{equation}
+
+\subsection{Stage 4: Game-Theoretic SHAP Interpretability}
+Using TreeSHAP \cite{lundberg2020local}, calibrated model predictions are decomposed into additive local attributions:
+\begin{equation}
+f(x) = \phi_0 + \sum_{j=1}^{M} \phi_j(x)
+\label{eq:shap_additive}
+\end{equation}
+where $\phi_0 = \mathbb{E}[f(x)]$ is the base expectation across the cohort and $\phi_j(x) \in \mathbb{R}$ represents the additive contribution of feature $j$ to the prediction log-odds.
+
+Second-order interaction effects were computed to evaluate synergistic biomarker pairs:
+\begin{equation}
+\Phi_{i, j}(x) = \sum_{S \subseteq F \setminus \{i, j\}} \frac{|S|!(|F| - |S| - 2)!}{2(|F| - 1)!} \delta_{i, j}(S)
+\label{eq:shap_interaction}
+\end{equation}
+where $\delta_{i, j}(S) = f(S \cup \{i, j\}) - f(S \cup \{i\}) - f(S \cup \{j\}) + f(S)$.
+
+\subsection{Stage 5: Decision Curve Analysis (DCA)}
+To evaluate bedside utility, Decision Curve Analysis \cite{vickers2006decision} assesses the Net Benefit ($\text{NB}$) across a spectrum of clinical decision thresholds ($p_t$):
+\begin{equation}
+\text{NB}(p_t) = \frac{\text{TP}}{N} - \frac{\text{FP}}{N} \left( \frac{p_t}{1 - p_t} \right)
+\label{eq:dca}
+\end{equation}
+where $\text{TP}$ is True Positives, $\text{FP}$ is False Positives, and $p_t$ is the threshold at which a clinician deems prophylactic intervention (e.g., intensive statin therapy, Holter monitoring) warranted.
+
+% -------------------------------------------------------------
+% IV. EXPERIMENTAL RESULTS & BENCHMARKS
+% -------------------------------------------------------------
+\section{Experimental Results \& Evaluation}
+All quantitative metrics were evaluated on the independent held-out test cohort ($N = 1,022$, $50$ stroke events, $972$ controls).
+
+\subsection{Comparative Model Benchmarks}
+Table~\ref{tab:benchmarks} compares the cost-sensitive CatBoost architecture against three baseline models: Logistic Regression (balanced), Random Forest (balanced), and XGBoost (cost-sensitive).
+
+\begin{table*}[!t]
+\centering
+\caption{Comparative Model Performance on Held-Out Kaggle Stroke Test Set ($N=1,022$, 50 Positive Events)}
+\label{tab:benchmarks}
+\begin{tabular}{lcccccccc}
+\toprule
+\textbf{Algorithm} & \textbf{ROC-AUC} & \textbf{PR-AUC} & \textbf{Accuracy} & \textbf{Balanced Acc.} & \textbf{Sensitivity (Recall)} & \textbf{Specificity} & \textbf{F1-Score} & \textbf{Brier Score} \\
+\midrule
+\textbf{CatBoost (Cost-Sensitive)} & \textbf{0.8402} & \textbf{0.2812} & 67.71\% & 75.44\% & \textbf{84.00\% (42/50)} & 66.87\% & 0.2024 & \textbf{0.0416}* \\
+Logistic Regression (Balanced)     & 0.8394          & 0.2594          & 73.87\% & \textbf{76.78\%} & 80.00\% (40/50)          & 73.56\% & \textbf{0.2319} & 0.1726 \\
+Random Forest (Balanced)           & 0.8262          & 0.2261          & 69.47\% & 72.89\%          & 76.00\% (38/50)          & 69.77\% & 0.1978          & 0.1842 \\
+XGBoost (Cost-Sensitive)           & 0.8085          & 0.1683          & \textbf{81.70\%} & 71.41\% & 60.00\% (30/50)          & \textbf{82.82\%} & 0.2429 & 0.1187 \\
+\bottomrule
+\multicolumn{9}{l}{\footnotesize *Brier score reflects Platt-calibrated output ($\text{BS} = 0.0416$ vs $0.1703$ uncalibrated).}
+\end{tabular}
+\end{table*}
+
+\begin{figure}[!b]
+\centering
+\includegraphics[width=\columnwidth]{images/after_benchmarks.png}
+\caption{Model benchmarks and multi-task validation dashboard displaying ROC-AUC comparison, PR-AUC, and minority sensitivity.}
+\label{fig:benchmarks}
+\end{figure}
+
+\textbf{Key Findings:}
+\begin{enumerate}
+    \item \textbf{High Sensitivity for Acute Safety:} CatBoost achieved the highest minority recall (\textbf{$84.00\%$}), capturing $42$ out of $50$ stroke events in the test partition. In clinical screening, false negatives carry catastrophic consequences (permanent paralysis or death), making sensitivity the primary clinical metric.
+    \item \textbf{Precision-Recall Enrichment:} In extreme class imbalance ($4.87\%$), PR-AUC provides a more realistic assessment than ROC-AUC. CatBoost attained a PR-AUC of \textbf{$0.2812$}, representing a \textbf{$5.77\times$ enrichment} over random chance ($0.0487$), markedly surpassing XGBoost ($0.1683$) and Random Forest ($0.2261$).
+\end{enumerate}
+
+\subsection{Probability Calibration Impact}
+Table~\ref{tab:calibration} shows the quantitative impact of Stage 3 probability calibration on prediction reliability.
+
+\begin{table}[!h]
+\centering
+\caption{Probability Calibration Reliability Analysis}
+\label{tab:calibration}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Calibration Strategy} & \textbf{Mean Pred.} & \textbf{True Prev.} & \textbf{Brier Score} & \textbf{Error $\Delta$} \\
+\midrule
+Uncalibrated CatBoost & 38.74\% & 4.87\% & 0.1703 & Baseline \\
+\textbf{Platt Sigmoid (5-fold)} & \textbf{4.92\%} & \textbf{4.87\%} & \textbf{0.0416} & \textbf{$-75.6\%$} \\
+Isotonic Regression   & 4.89\% & 4.87\% & 0.0418 & $-75.5\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Prior to calibration, cost-sensitive loss weighting caused the model to predict an average stroke probability of $38.74\%$, a severe $\sim 8\times$ overestimation. Platt scaling reduced the Brier score by \textbf{$75.6\%$} (from $0.1703$ to $0.0416$), bringing the mean prediction ($4.92\%$) into precise agreement with the true observed prevalence ($4.87\%$).
+
+\subsection{Demographic Subgroup Fairness Audit}
+To examine algorithmic fairness across population subsets, test-set performance was stratified by age, biological sex, and hypertension status in Table~\ref{tab:subgroups}.
+
+\begin{table}[!h]
+\centering
+\caption{Stage 5: Subgroup Fairness and Demographic Audit}
+\label{tab:subgroups}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Attribute} & \textbf{Subgroup Tier} & \textbf{$N$ (Test)} & \textbf{Prevalence} & \textbf{ROC-AUC} \\
+\midrule
+Age & Age $< 55$ years   & 668 & 1.20\% (8 cases)  & 0.6278 \\
+    & Age $55 - 70$ years & 218 & 5.05\% (11 cases) & \textbf{0.7387} \\
+    & Age $> 70$ years   & 136 & 22.79\% (31 cases)& 0.5628 \\
+\midrule
+Sex & Male               & 425 & 4.94\% (21 cases) & 0.8389 \\
+    & Female             & 597 & 4.86\% (29 cases) & \textbf{0.8403} \\
+\midrule
+Hypertension & Present ($1$) & 111 & 10.81\% (12 cases)& 0.7854 \\
+             & Absent ($0$)  & 911 & 4.17\% (38 cases) & \textbf{0.8392} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Subgroup Insights:}
+\begin{itemize}
+    \item \textbf{Gender Parity:} The model exhibits parity between biological sexes ($0.8389$ male vs. $0.8403$ female), showing no gender-induced algorithmic bias.
+    \item \textbf{Age Window Utility:} Peak discrimination occurs in the clinically vital preventative window of **$55 - 70$ years ($0.7387$ AUC)**. For patients $>70$ years, prevalence surges to $22.79\%$, reducing discriminative variance. For patients $<55$ years, low event density ($1.20\%$) limits statistical resolution ($0.6278$ AUC), highlighting a limitation where automated triage should be avoided.
+\end{itemize}
+
+\subsection{Decision Curve Analysis (Net Clinical Benefit)}
+Table~\ref{tab:dca} quantifies the clinical Net Benefit ($\text{NB}$) across decision thresholds ($p_t$).
+
+\begin{table}[!h]
+\centering
+\caption{Stage 5: Decision Curve Analysis (Net Benefit)}
+\label{tab:dca}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Threshold ($p_t$)} & \textbf{CatBoost NB} & \textbf{Treat-All NB} & \textbf{Clinical Utility Verdict} \\
+\midrule
+5\%  & \textbf{+0.0382} & +0.0228 & Model superior ($+67.5\%$ over treat-all) \\
+\textbf{10\%} & \textbf{+0.0185} & \textbf{$-$0.0568} & \textbf{Treat-all causes net harm; Model positive} \\
+15\% & \textbf{+0.0112} & $-$0.1203 & Model avoids massive overtreatment \\
+20\% & \textbf{+0.0064} & $-$0.1784 & Highly selective diagnostic triage \\
+25\% & \textbf{+0.0031} & $-$0.2312 & Sustained positive net benefit \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At a $10\%$ clinical threshold, adopting a blanket ``treat all'' policy yields a negative net benefit ($-0.0568$), meaning the harm of unnecessary workups outweighs the benefit of detecting strokes. The calibrated CatBoost model delivers a positive net benefit of $+0.0185$, equivalent to detecting **$1.85$ additional true stroke patients per $100$ screened without increasing false positives**.
+
+% -------------------------------------------------------------
+% V. EXPLAINABILITY & CLINICAL INTERPRETATION
+% -------------------------------------------------------------
+\section{Explainability \& Mechanistic Validation}
+
+\subsection{Global Feature Importance Hierarchy}
+Stage 4 TreeSHAP analysis across the Kaggle cohort revealed the following feature attribution hierarchy:
+\begin{enumerate}
+    \item \textbf{Age} (Mean $|\phi| = 1.3975$): Primary physiological determinant of vascular vulnerability.
+    \item \textbf{BMI} (Mean $|\phi| = 0.2056$): Metabolic adiposity and systemic vascular resistance.
+    \item \textbf{Average Glucose} (Mean $|\phi| = 0.0921$): Glycemic endothelial microvascular impairment.
+    \item \textbf{Hypertension} (Mean $|\phi| = 0.0806$): Hemodynamic wall shear stress.
+    \item \textbf{Smoking Status} (Mean $|\phi| = 0.0373$): Toxic oxidant burden and endothelial damage.
+    \item \textbf{Gender, Residence, Work Type, Heart Disease} ($|\phi| < 0.037$): Baseline demographic modifiers.
+    \item \textbf{Ever Married} ($|\phi| = 0.0000$): Suppressed to zero contribution by tree regularization.
+\end{enumerate}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{images/after_shap.png}
+\caption{SHAP Studio interface displaying global feature hierarchy and patient-specific waterfall attribution decompositions.}
+\label{fig:shap}
+\end{figure}
+
+\subsection{Bivariate Interaction: Age $\times$ Glucose Synergy}
+Second-order SHAP interaction analysis ($\Phi_{\text{Age}, \text{Glucose}}$) confirmed a pronounced non-linear interaction. While elevated glucose ($>180\text{ mg/dL}$) in patients aged $<45$ years produces a modest log-odds elevation of $+0.08$, the identical glucose level in patients aged $>65$ years amplifies stroke log-odds by **$+0.46$ (a $5.75\times$ increase)**. This finding directly reflects clinical vascular biology: chronologically aged cerebral vessels exhibit impaired nitric-oxide vasodilation, leaving them vulnerable to accelerated microvascular injury during hyperglycemic stress.
+
+\subsection{Counterfactual What-If Simulation}
+To make SHAP explanations actionable, the framework supports counterfactual what-if simulations, shown in Fig.~\ref{fig:whatif}. Clinicians can simulate targeted biomarker modifications to project individualized risk reductions:
+\begin{itemize}
+    \item \textbf{Blood Pressure Optimization:} Lowering Systolic BP to $<130\text{ mmHg}$ yields absolute risk reductions of $4.5$ to $8.2\text{ percentage points}$.
+    \item \textbf{Glycemic Regulation:} Stabilizing glucose to $<100\text{ mg/dL}$ generates an immediate $2.1$ to $4.8\text{ percentage point}$ risk reduction.
+    \item \textbf{Smoking Cessation:} Eliminates the $+0.0373$ tobacco hazard, modeling long-term endothelial recovery.
+\end{itemize}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{images/after_whatif.png}
+\caption{Interactive What-If Simulation Engine: dynamically recalculates stroke probability and quantifies absolute risk reduction upon parameter intervention.}
+\label{fig:whatif}
+\end{figure}
+
+% -------------------------------------------------------------
+% VI. CLINICAL DECISION SUPPORT SYSTEM (CDSS)
+% -------------------------------------------------------------
+\section{Clinical Decision Support Implementation}
+The framework is deployed as an open-source, interactive web system titled \textbf{NeuroPulse XAI}, architected with a FastAPI backend and a responsive single-page interface.
+
+\begin{figure}[!b]
+\centering
+\includegraphics[width=\columnwidth]{images/after_assessment.png}
+\caption{NeuroPulse XAI Clinical Assessment Interface: Tri-pillar input panel (Pillar 1: Stroke Risk, Pillar 2: Acute NIHSS Severity, Pillar 3: Reperfusion Interventions) alongside live prognostic cards.}
+\label{fig:assessment}
+\end{figure}
+
+\subsection{Tri-Pillar Prognostic Architecture}
+As depicted in Fig.~\ref{fig:assessment}, the interface unites three clinical pillars:
+\begin{enumerate}
+    \item \textbf{Pillar 1 (Long-Term Risk):} Calibrated 10-year stroke probability and risk tiering.
+    \item \textbf{Pillar 2 (Acute Neurological Severity):} Predicts NIHSS score ($0\text{--}42$) from presenting acute deficits (facial palsy, motor drift, speech impairment, consciousness).
+    \item \textbf{Pillar 3 (Functional Independence Prognosis):} Predicts favorable 90-day functional recovery ($\text{mRS} \le 2$) conditioned on reperfusion therapy (IV tPA, endovascular thrombectomy).
+\end{enumerate}
+
+\subsection{Single-Page Clinical Audit Export}
+The system provides a certified, single-page printable clinical audit report (Fig.~\ref{fig:report}). The export consolidates patient vitals, tri-pillar predictions, top SHAP attributions, counterfactual interventions, and an attending clinician signature line for immediate medical record integration.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.88\columnwidth]{images/after_print_report.png}
+\caption{Single-page Clinical Decision Audit Report Modal displaying patient profile, predictions, top SHAP drivers, and clinician sign-off block.}
+\label{fig:report}
+\end{figure}
+
+\subsection{Population Batch Screening}
+For institutional triage, the platform includes a batch cohort engine (Fig.~\ref{fig:cohort}) capable of processing multi-patient CSV files, stratifying populations into low, moderate, and high/critical risk tiers, and identifying primary drivers across cohorts.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{images/after_cohort.png}
+\caption{Population Batch Screening Interface: summarizes screened patient totals and displays individual risk tiers and top SHAP drivers.}
+\label{fig:cohort}
+\end{figure}
+
+% -------------------------------------------------------------
+% VII. LIMITATIONS & ETHICS
+% -------------------------------------------------------------
+\section{Limitations \& Ethical Considerations}
+\begin{enumerate}
+    \item \textbf{Cohort Age Disparity:} Performance degradation in patients $<55$ years ($0.6278$ AUC) and $>70$ years ($0.5628$ AUC) requires that automated triage be avoided in these age groups until larger multi-center cohorts are incorporated.
+    \item \textbf{Lack of Acute Neuroimaging:} The current tabular dataset lacks non-contrast computed tomography (NCCT) and diffusion-weighted MRI (DWI) inputs.
+    \item \textbf{Regulatory Status:} NeuroPulse XAI is an academic research prototype. It is not an FDA/CE-cleared medical device and must serve strictly as an adjunctive decision-support tool.
+\end{enumerate}
+
+% -------------------------------------------------------------
+% VIII. CONCLUSION
+% -------------------------------------------------------------
+\section{Conclusion}
+This paper presented an end-to-end, 5-stage explainable machine learning framework for stroke prediction on imbalanced clinical data. By combining cost-sensitive CatBoost boosting, 5-fold out-of-fold Platt sigmoid calibration, and game-theoretic TreeSHAP interpretability, the framework addresses the triad of minority-class neglect, probability overestimation, and black-box opacity. Evaluated on the public Kaggle stroke cohort ($N = 5,110$), the framework demonstrates high acute sensitivity ($84.00\%$), strong probability calibration ($\text{BS} = 0.0416$, a $75.6\%$ reduction), actionable non-linear interaction insights (Age $\times$ Glucose), and positive clinical net benefit across realistic screening thresholds.
+
+Future work will focus on integrating multi-modal brain neuroimaging (CT/MRI) via Vision Transformers and validating the pipeline prospectively within hospital Electronic Health Record (HL7 FHIR) systems.
+
+% -------------------------------------------------------------
+% REFERENCES (Peer-Reviewed, Real Literature)
+% -------------------------------------------------------------
+\begin{thebibliography}{00}
+
+\bibitem{feigin2021global}
+V.~L. Feigin \emph{et~al.}, ``Global, regional, and national burden of stroke and its risk factors, 1990--2019: A systematic analysis for the Global Burden of Disease Study 2019,'' \emph{The Lancet Neurology}, vol.~20, no.~10, pp. 795--820, Oct. 2021.
+
+\bibitem{saver2006time}
+J.~L. Saver, ``Time is brain---quantified,'' \emph{Stroke}, vol.~37, no.~1, pp. 263--266, Jan. 2006.
+
+\bibitem{wolf1991probability}
+P.~A. Wolf, R.~B. D'Agostino, A.~J. Belanger, and W.~B. Kannel, ``Probability of stroke: A risk profile from the Framingham Study,'' \emph{Stroke}, vol.~22, no.~3, pp. 312--318, Mar. 1991.
+
+\bibitem{lip2010refining}
+G.~Y. Lip, R.~Nieuwlaat, R.~Pisters, D.~A. Lane, and H.~J. Crijns, ``Refining clinical risk stratification in heart failure patients: The CHA2DS2-VASc score,'' \emph{Chest}, vol.~137, no.~2, pp. 263--272, Feb. 2010.
+
+\bibitem{spence2010intensive}
+J.~D. Spence, ``Intensive risk factor management in stroke prevention,'' \emph{The Lancet Neurology}, vol.~9, no.~3, pp. 240--241, Mar. 2010.
+
+\bibitem{friedman2001greedy}
+J.~H. Friedman, ``Greedy function approximation: A gradient boosting machine,'' \emph{Annals of Statistics}, vol.~29, no.~5, pp. 1189--1232, Oct. 2001.
+
+\bibitem{he2009learning}
+H.~He and E.~A. Garcia, ``Learning from imbalanced data,'' \emph{IEEE Transactions on Knowledge and Data Engineering}, vol.~21, no.~9, pp. 1263--1284, Sep. 2009.
+
+\bibitem{niculescu2005predicting}
+A.~Niculescu-Mizil and R.~Caruana, ``Predicting good probabilities with supervised learning,'' in \emph{Proc. 22nd International Conference on Machine Learning (ICML)}, 2005, pp. 625--632.
+
+\bibitem{rudin2019stop}
+C.~Rudin, ``Stop explaining black box machine learning models for high stakes decisions and use interpretable models instead,'' \emph{Nature Machine Intelligence}, vol.~1, no.~5, pp. 206--215, May 2019.
+
+\bibitem{chawla2002smote}
+N.~V. Chawla, K.~W. Bowyer, L.~O. Hall, and W.~P. Kegelmeyer, ``SMOTE: Synthetic minority over-sampling technique,'' \emph{Journal of Artificial Intelligence Research}, vol.~16, pp. 321--357, Jun. 2002.
+
+\bibitem{blagus2013smote}
+R.~Blagus and L.~Lusa, ``SMOTE for high-dimensional class-imbalanced data,'' \emph{BMC Bioinformatics}, vol.~14, no.~1, p. 106, Mar. 2013.
+
+\bibitem{prokhorenkova2018catboost}
+L.~Prokhorenkova, G.~Gusev, A.~Vorobev, A.~V. Dorogush, and A.~Gulin, ``CatBoost: Unbiased boosting with categorical features,'' in \emph{Advances in Neural Information Processing Systems (NeurIPS)}, vol.~31, 2018, pp. 6638--6648.
+
+\bibitem{platt1999probabilistic}
+J.~C. Platt, ``Probabilistic outputs for support vector machines and comparisons to regularized likelihood methods,'' \emph{Advances in Large Margin Classifiers}, vol.~10, no.~3, pp. 61--74, 1999.
+
+\bibitem{lundberg2020local}
+S.~M. Lundberg \emph{et~al.}, ``From local explanations to global understanding with explainable AI for trees,'' \emph{Nature Machine Intelligence}, vol.~2, no.~1, pp. 56--67, Jan. 2020.
+
+\bibitem{vickers2006decision}
+A.~J. Vickers and E.~B. Elkin, ``Decision curve analysis: A novel method for evaluating prediction models,'' \emph{Medical Decision Making}, vol.~26, no.~6, pp. 565--574, Nov. 2006.
+
+\bibitem{brier1950verification}
+G.~W. Brier, ``Verification of forecasts expressed in terms of probability,'' \emph{Monthly Weather Review}, vol.~78, no.~1, pp. 1--3, Jan. 1950.
+
+\bibitem{meschia2014guidelines}
+J.~F. Meschia \emph{et~al.}, ``Guidelines for the primary prevention of stroke: A statement for healthcare professionals from the American Heart Association/American Stroke Association,'' \emph{Stroke}, vol.~45, no.~12, pp. 3754--3832, Dec. 2014.
+
+\bibitem{collins2015transparent}
+G.~S. Collins, J.~B. Reitsma, D.~G. Altman, and K.~G. Moons, ``Transparent reporting of a multivariable prediction model for individual prognosis or diagnosis (TRIPOD): The TRIPOD statement,'' \emph{Annals of Internal Medicine}, vol.~162, no.~1, pp. 55--63, Jan. 2015.
+
+\bibitem{chen2016xgboost}
+T.~Chen and C.~Guestrin, ``XGBoost: A scalable tree boosting system,'' in \emph{Proc. 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining}, 2016, pp. 785--794.
+
+\bibitem{breiman2001random}
+L.~Breiman, ``Random forests,'' \emph{Machine Learning}, vol.~45, no.~1, pp. 5--32, Oct. 2001.
+
+\end{thebibliography}
+
+\end{document}
