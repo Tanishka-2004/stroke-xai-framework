@@ -125,13 +125,13 @@ The framework is organized into five operational stages designed to guarantee me
 \end{figure*}
 
 \subsection{Stage 1: Clinical Preprocessing \& Leakage-Free Splitting}
-The public Kaggle Healthcare Stroke Dataset comprises $5,110$ patient profiles across $11$ physiological and demographic features. A single ambiguous record (`gender = Other') was excluded, yielding $N = 5,109$ valid patients.
+The public Kaggle Healthcare Stroke Dataset comprises $5,110$ patient profiles across $11$ physiological and demographic features. A single ambiguous record (\texttt{gender = `Other'}) was excluded, yielding $N = 5,109$ valid patients.
 
 To enforce strict protection against data leakage:
 \begin{enumerate}
-    \item The dataset was partitioned into an $80\%$ Training Cohort ($N_{\text{train}} = 4,087$; $199$ strokes) and a $20\%$ Held-Out Test Cohort ($N_{\text{test}} = 1,022$; $50$ strokes) via stratified random sampling on the target variable (`stroke`).
-    \item Body Mass Index (`bmi`) contained $201$ missing values ($3.93\%$). The median BMI was derived exclusively from the training partition ($\text{Median}_{\text{train}} = 28.1\text{ kg/m}^2$) and applied to impute missing entries across both partitions.
-    \item Continuous variables (`age`, `avg_glucose_level`, `bmi`) were standardized, and categorical variables (`gender`, `hypertension`, `heart_disease`, `ever_married`, `work_type`, `Residence_type`, `smoking_status`) were preserved natively for CatBoost and one-hot encoded for baseline models.
+    \item The dataset was partitioned into an $80\%$ Training Cohort ($N_{\text{train}} = 4,087$; $199$ strokes) and a $20\%$ Held-Out Test Cohort ($N_{\text{test}} = 1,022$; $50$ strokes) via stratified random sampling on the target variable (\texttt{stroke}).
+    \item Body Mass Index (\texttt{bmi}) contained $201$ missing values ($3.93\%$). The median BMI was derived exclusively from the training partition ($\text{Median}_{\text{train}} = 28.1\text{ kg/m}^2$) and applied to impute missing entries across both partitions.
+    \item Continuous variables (\texttt{age}, \texttt{avg\_glucose\_level}, \texttt{bmi}) were standardized, and categorical variables (\texttt{gender}, \texttt{hypertension}, \texttt{heart\_disease}, \texttt{ever\_married}, \texttt{work\_type}, \texttt{Residence\_type}, \texttt{smoking\_status}) were preserved natively for CatBoost and one-hot encoded for baseline models.
 \end{enumerate}
 
 \subsection{Stage 2: Cost-Sensitive CatBoost Classifier}
@@ -273,7 +273,7 @@ Hypertension & Present ($1$) & 111 & 10.81\% (12 cases)& 0.7854 \\
 \textbf{Subgroup Insights:}
 \begin{itemize}
     \item \textbf{Gender Parity:} The model exhibits parity between biological sexes ($0.8389$ male vs. $0.8403$ female), showing no gender-induced algorithmic bias.
-    \item \textbf{Age Window Utility:} Peak discrimination occurs in the clinically vital preventative window of **$55 - 70$ years ($0.7387$ AUC)**. For patients $>70$ years, prevalence surges to $22.79\%$, reducing discriminative variance. For patients $<55$ years, low event density ($1.20\%$) limits statistical resolution ($0.6278$ AUC), highlighting a limitation where automated triage should be avoided.
+    \item \textbf{Age Window Utility:} Peak discrimination occurs in the clinically vital preventative window of \textbf{$55 - 70$ years ($0.7387$ AUC)}. For patients $>70$ years, prevalence surges to $22.79\%$, reducing discriminative variance. For patients $<55$ years, low event density ($1.20\%$) limits statistical resolution ($0.6278$ AUC), highlighting a limitation where automated triage should be avoided.
 \end{itemize}
 
 \subsection{Decision Curve Analysis (Net Clinical Benefit)}
@@ -298,7 +298,7 @@ Table~\ref{tab:dca} quantifies the clinical Net Benefit ($\text{NB}$) across dec
 }
 \end{table}
 
-At a $10\%$ clinical threshold, adopting a blanket ``treat all'' policy yields a negative net benefit ($-0.0568$), meaning the harm of unnecessary workups outweighs the benefit of detecting strokes. The calibrated CatBoost model delivers a positive net benefit of $+0.0185$, equivalent to detecting **$1.85$ additional true stroke patients per $100$ screened without increasing false positives**.
+At a $10\%$ clinical threshold, adopting a blanket ``treat all'' policy yields a negative net benefit ($-0.0568$), meaning the harm of unnecessary workups outweighs the benefit of detecting strokes. The calibrated CatBoost model delivers a positive net benefit of $+0.0185$, equivalent to detecting \textbf{$1.85$ additional true stroke patients per $100$ screened without increasing false positives}.
 
 % -------------------------------------------------------------
 % V. EXPLAINABILITY & CLINICAL INTERPRETATION
@@ -325,7 +325,7 @@ Stage 4 TreeSHAP analysis across the Kaggle cohort revealed the following featur
 \end{figure}
 
 \subsection{Bivariate Interaction: Age $\times$ Glucose Synergy}
-Second-order SHAP interaction analysis ($\Phi_{\text{Age}, \text{Glucose}}$) confirmed a pronounced non-linear interaction. While elevated glucose ($>180\text{ mg/dL}$) in patients aged $<45$ years produces a modest log-odds elevation of $+0.08$, the identical glucose level in patients aged $>65$ years amplifies stroke log-odds by **$+0.46$ (a $5.75\times$ increase)**. This finding directly reflects clinical vascular biology: chronologically aged cerebral vessels exhibit impaired nitric-oxide vasodilation, leaving them vulnerable to accelerated microvascular injury during hyperglycemic stress.
+Second-order SHAP interaction analysis ($\Phi_{\text{Age}, \text{Glucose}}$) confirmed a pronounced non-linear interaction. While elevated glucose ($>180\text{ mg/dL}$) in patients aged $<45$ years produces a modest log-odds elevation of $+0.08$, the identical glucose level in patients aged $>65$ years amplifies stroke log-odds by \textbf{$+0.46$ (a $5.75\times$ increase)}. This finding directly reflects clinical vascular biology: chronologically aged cerebral vessels exhibit impaired nitric-oxide vasodilation, leaving them vulnerable to accelerated microvascular injury during hyperglycemic stress.
 
 \subsection{Counterfactual What-If Simulation}
 To make SHAP explanations actionable, the framework supports counterfactual what-if simulations, shown in Fig.~\ref{fig:whatif}. Clinicians can simulate targeted biomarker modifications to project individualized risk reductions:
