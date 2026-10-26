@@ -14,9 +14,10 @@
 \usepackage{url}
 \usepackage{microtype}
 \usepackage{balance}
+\usepackage{stfloats}
 
 % Path to graphics files
-\graphicspath{{images/}}
+\graphicspath{{images/}{./}}
 \DeclareGraphicsExtensions{.png,.jpg,.jpeg,.pdf}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
@@ -116,9 +117,9 @@ where scalar coefficients $A$ and $B$ are estimated via maximum likelihood on in
 \section{Methodology \& Framework Architecture}
 The framework is organized into five operational stages designed to guarantee methodological rigor and leakage-free validation, as illustrated in Fig.~\ref{fig:architecture}.
 
-\begin{figure*}[!t]
+\begin{figure*}[t]
 \centering
-\includegraphics[width=0.92\textwidth]{images/after_kaggle.png}
+\includegraphics[width=0.95\textwidth,keepaspectratio]{after_kaggle.png}
 \caption{The 5-Stage Calibrated, Cost-Sensitive, and Explainable Stroke Prediction Framework as deployed in the NeuroPulse XAI interface, detailing Stage 1 preprocessing, Stage 2 CatBoost modeling, Stage 3 Platt calibration, Stage 4 SHAP rankings, and Stage 5 reliable multi-dimensional evaluation.}
 \label{fig:architecture}
 \end{figure*}
@@ -189,10 +190,11 @@ All quantitative metrics were evaluated on the independent held-out test cohort 
 \subsection{Comparative Model Benchmarks}
 Table~\ref{tab:benchmarks} compares the cost-sensitive CatBoost architecture against three baseline models: Logistic Regression (balanced), Random Forest (balanced), and XGBoost (cost-sensitive).
 
-\begin{table*}[!t]
+\begin{table*}[t]
 \centering
 \caption{Comparative Model Performance on Held-Out Kaggle Stroke Test Set ($N=1,022$, 50 Positive Events)}
 \label{tab:benchmarks}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccccc}
 \toprule
 \textbf{Algorithm} & \textbf{ROC-AUC} & \textbf{PR-AUC} & \textbf{Accuracy} & \textbf{Balanced Acc.} & \textbf{Sensitivity (Recall)} & \textbf{Specificity} & \textbf{F1-Score} & \textbf{Brier Score} \\
@@ -203,12 +205,13 @@ Random Forest (Balanced)           & 0.8262          & 0.2261          & 69.47\%
 XGBoost (Cost-Sensitive)           & 0.8085          & 0.1683          & \textbf{81.70\%} & 71.41\% & 60.00\% (30/50)          & \textbf{82.82\%} & 0.2429 & 0.1187 \\
 \bottomrule
 \multicolumn{9}{l}{\footnotesize *Brier score reflects Platt-calibrated output ($\text{BS} = 0.0416$ vs $0.1703$ uncalibrated).}
-\end{tabular}
+\end{tabular}%
+}
 \end{table*}
 
-\begin{figure}[!b]
+\begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{images/after_benchmarks.png}
+\includegraphics[width=\columnwidth,keepaspectratio]{after_benchmarks.png}
 \caption{Model benchmarks and multi-task validation dashboard displaying ROC-AUC comparison, PR-AUC, and minority sensitivity.}
 \label{fig:benchmarks}
 \end{figure}
@@ -222,10 +225,11 @@ XGBoost (Cost-Sensitive)           & 0.8085          & 0.1683          & \textbf
 \subsection{Probability Calibration Impact}
 Table~\ref{tab:calibration} shows the quantitative impact of Stage 3 probability calibration on prediction reliability.
 
-\begin{table}[!h]
+\begin{table}[t]
 \centering
 \caption{Probability Calibration Reliability Analysis}
 \label{tab:calibration}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Calibration Strategy} & \textbf{Mean Pred.} & \textbf{True Prev.} & \textbf{Brier Score} & \textbf{Error $\Delta$} \\
@@ -234,7 +238,8 @@ Uncalibrated CatBoost & 38.74\% & 4.87\% & 0.1703 & Baseline \\
 \textbf{Platt Sigmoid (5-fold)} & \textbf{4.92\%} & \textbf{4.87\%} & \textbf{0.0416} & \textbf{$-75.6\%$} \\
 Isotonic Regression   & 4.89\% & 4.87\% & 0.0418 & $-75.5\%$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 Prior to calibration, cost-sensitive loss weighting caused the model to predict an average stroke probability of $38.74\%$, a severe $\sim 8\times$ overestimation. Platt scaling reduced the Brier score by \textbf{$75.6\%$} (from $0.1703$ to $0.0416$), bringing the mean prediction ($4.92\%$) into precise agreement with the true observed prevalence ($4.87\%$).
@@ -242,10 +247,11 @@ Prior to calibration, cost-sensitive loss weighting caused the model to predict 
 \subsection{Demographic Subgroup Fairness Audit}
 To examine algorithmic fairness across population subsets, test-set performance was stratified by age, biological sex, and hypertension status in Table~\ref{tab:subgroups}.
 
-\begin{table}[!h]
+\begin{table}[t]
 \centering
 \caption{Stage 5: Subgroup Fairness and Demographic Audit}
 \label{tab:subgroups}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{llccc}
 \toprule
 \textbf{Attribute} & \textbf{Subgroup Tier} & \textbf{$N$ (Test)} & \textbf{Prevalence} & \textbf{ROC-AUC} \\
@@ -260,7 +266,8 @@ Sex & Male               & 425 & 4.94\% (21 cases) & 0.8389 \\
 Hypertension & Present ($1$) & 111 & 10.81\% (12 cases)& 0.7854 \\
              & Absent ($0$)  & 911 & 4.17\% (38 cases) & \textbf{0.8392} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \textbf{Subgroup Insights:}
@@ -272,10 +279,11 @@ Hypertension & Present ($1$) & 111 & 10.81\% (12 cases)& 0.7854 \\
 \subsection{Decision Curve Analysis (Net Clinical Benefit)}
 Table~\ref{tab:dca} quantifies the clinical Net Benefit ($\text{NB}$) across decision thresholds ($p_t$).
 
-\begin{table}[!h]
+\begin{table}[t]
 \centering
 \caption{Stage 5: Decision Curve Analysis (Net Benefit)}
 \label{tab:dca}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{cccc}
 \toprule
 \textbf{Threshold ($p_t$)} & \textbf{CatBoost NB} & \textbf{Treat-All NB} & \textbf{Clinical Utility Verdict} \\
@@ -286,7 +294,8 @@ Table~\ref{tab:dca} quantifies the clinical Net Benefit ($\text{NB}$) across dec
 20\% & \textbf{+0.0064} & $-$0.1784 & Highly selective diagnostic triage \\
 25\% & \textbf{+0.0031} & $-$0.2312 & Sustained positive net benefit \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 At a $10\%$ clinical threshold, adopting a blanket ``treat all'' policy yields a negative net benefit ($-0.0568$), meaning the harm of unnecessary workups outweighs the benefit of detecting strokes. The calibrated CatBoost model delivers a positive net benefit of $+0.0185$, equivalent to detecting **$1.85$ additional true stroke patients per $100$ screened without increasing false positives**.
@@ -308,9 +317,9 @@ Stage 4 TreeSHAP analysis across the Kaggle cohort revealed the following featur
     \item \textbf{Ever Married} ($|\phi| = 0.0000$): Suppressed to zero contribution by tree regularization.
 \end{enumerate}
 
-\begin{figure}[!t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{images/after_shap.png}
+\includegraphics[width=\columnwidth,keepaspectratio]{after_shap.png}
 \caption{SHAP Studio interface displaying global feature hierarchy and patient-specific waterfall attribution decompositions.}
 \label{fig:shap}
 \end{figure}
@@ -326,9 +335,9 @@ To make SHAP explanations actionable, the framework supports counterfactual what
     \item \textbf{Smoking Cessation:} Eliminates the $+0.0373$ tobacco hazard, modeling long-term endothelial recovery.
 \end{itemize}
 
-\begin{figure}[!t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{images/after_whatif.png}
+\includegraphics[width=\columnwidth,keepaspectratio]{after_whatif.png}
 \caption{Interactive What-If Simulation Engine: dynamically recalculates stroke probability and quantifies absolute risk reduction upon parameter intervention.}
 \label{fig:whatif}
 \end{figure}
@@ -339,9 +348,9 @@ To make SHAP explanations actionable, the framework supports counterfactual what
 \section{Clinical Decision Support Implementation}
 The framework is deployed as an open-source, interactive web system titled \textbf{NeuroPulse XAI}, architected with a FastAPI backend and a responsive single-page interface.
 
-\begin{figure}[!b]
+\begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{images/after_assessment.png}
+\includegraphics[width=\columnwidth,keepaspectratio]{after_assessment.png}
 \caption{NeuroPulse XAI Clinical Assessment Interface: Tri-pillar input panel (Pillar 1: Stroke Risk, Pillar 2: Acute NIHSS Severity, Pillar 3: Reperfusion Interventions) alongside live prognostic cards.}
 \label{fig:assessment}
 \end{figure}
@@ -357,9 +366,9 @@ As depicted in Fig.~\ref{fig:assessment}, the interface unites three clinical pi
 \subsection{Single-Page Clinical Audit Export}
 The system provides a certified, single-page printable clinical audit report (Fig.~\ref{fig:report}). The export consolidates patient vitals, tri-pillar predictions, top SHAP attributions, counterfactual interventions, and an attending clinician signature line for immediate medical record integration.
 
-\begin{figure}[!t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.88\columnwidth]{images/after_print_report.png}
+\includegraphics[width=\columnwidth,keepaspectratio]{after_print_report.png}
 \caption{Single-page Clinical Decision Audit Report Modal displaying patient profile, predictions, top SHAP drivers, and clinician sign-off block.}
 \label{fig:report}
 \end{figure}
@@ -367,9 +376,9 @@ The system provides a certified, single-page printable clinical audit report (Fi
 \subsection{Population Batch Screening}
 For institutional triage, the platform includes a batch cohort engine (Fig.~\ref{fig:cohort}) capable of processing multi-patient CSV files, stratifying populations into low, moderate, and high/critical risk tiers, and identifying primary drivers across cohorts.
 
-\begin{figure}[!t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{images/after_cohort.png}
+\includegraphics[width=\columnwidth,keepaspectratio]{after_cohort.png}
 \caption{Population Batch Screening Interface: summarizes screened patient totals and displays individual risk tiers and top SHAP drivers.}
 \label{fig:cohort}
 \end{figure}
